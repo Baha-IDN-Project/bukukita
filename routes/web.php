@@ -4,8 +4,9 @@ use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 
+// welcome page publik
 Route::get('/', function () {
-    return view('welcome');
+    return view('home');
 })->name('home');
 
 Route::get('dashboard', function () {
@@ -16,14 +17,16 @@ Route::get('dashboard', function () {
         'user'  => redirect()->route('user.dashboard'),
         default => redirect()->route('home'),
     };
-
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-
     Volt::route('dashboard', 'admin.dashboard')->name('dashboard');
+    Volt::route('/members', 'admin.member')
+        ->name('member'); // beri nama 'users.index'
+    // Manajemen Buku
+    Volt::route('/books', 'admin.buku')
+        ->name('buku'); // beri nama 'books.index'
 });
-
 // == RUTE KHUSUS USER (ANGGOTA) ==
 // - Harus login DAN harus 'user'
 Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(function () {
@@ -39,11 +42,11 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/two-factor', 'settings.two-factor')
         ->middleware(
             when(
-            Features::canManageTwoFactorAuthentication()
-                && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
-            ['password.confirm'],
-            [],
-        ),
+                Features::canManageTwoFactorAuthentication()
+                    && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
+                ['password.confirm'],
+                [],
+            ),
         )
         ->name('two-factor.show');
 });

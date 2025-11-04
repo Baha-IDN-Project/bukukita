@@ -30,21 +30,9 @@
 
             <flux:navbar class="me-1.5 space-x-0.5 rtl:space-x-reverse py-0!">
 
-                <flux:navbar class="-mb-px max-lg:hidden">
-                    <flux:navbar.item :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
-                    </flux:navbar.item>
-                </flux:navbar>
-
-
-                <flux:tooltip :content="__('Buku')" position="bottom">
-                    <flux:navbar.item
-                        class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="book-open-text"
-                        href="#"
-                        label="Buku"
-                    />
-                </flux:tooltip>
+                {{-- GANTI INI --}}
+                <x-nav.user-header-menu />
+                {{-- BATAS PENGGANTIAN --}}
             </flux:navbar>
 
             <!-- Desktop User Menu -->
