@@ -19,21 +19,27 @@ Route::get('dashboard', function () {
     };
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+//Admin
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Volt::route('dashboard', 'admin.dashboard')->name('dashboard');
+
     Volt::route('/members', 'admin.member')
-        ->name('member'); // beri nama 'users.index'
-    // Manajemen Buku
+        ->name('member');
+    Volt::route('/create-members', 'admin.members.create')
+    ->name('members.create');
+    Volt::route('/edit-members', 'admin.members.edit')
+    ->name('members.edit');
+
     Volt::route('/books', 'admin.buku')
-        ->name('buku'); // beri nama 'books.index'
+        ->name('buku');
 });
-// == RUTE KHUSUS USER (ANGGOTA) ==
-// - Harus login DAN harus 'user'
+
+//User
 Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(function () {
     Volt::route('dashboard', 'user.dashboard')->name('dashboard');
 });
 
-// == RUTE PENGATURAN (UNTUK SEMUA USER TERMASUK ADMIN) ==
+//All User
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit'); // <-- Namanya sekarang benar
