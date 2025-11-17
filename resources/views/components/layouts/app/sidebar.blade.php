@@ -18,7 +18,7 @@
                 <x-nav.user-sidebar />
             @endif
             {{-- BATAS PENGGANTIAN --}}
-            
+
             <flux:spacer />
 
             <flux:navlist variant="outline">

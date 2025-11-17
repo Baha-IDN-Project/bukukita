@@ -1,4 +1,13 @@
-<x-layouts.public :title="__('Selamat Datang di Perpustakaan Digital Bukukita')">
+<?php
+
+use Livewire\Volt\Component;
+use function Livewire\Volt\layout;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title; // <-- 1. Import Atribut Title
+
+layout('components.layouts.public');
+
+?>
 
     <div class="flex h-full w-full flex-1 flex-col gap-8 rounded-xl">
 
@@ -156,4 +165,4 @@
         </div>
 
     </div>
-</x-layouts.public>
+

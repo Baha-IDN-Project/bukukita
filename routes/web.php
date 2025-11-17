@@ -5,9 +5,7 @@ use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 
 // welcome page publik
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Volt::route('/', 'home')->name('home');
 
 Route::get('dashboard', function () {
     $role = auth()->user()->role;
@@ -25,13 +23,18 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Volt::route('/members', 'admin.member')
         ->name('member');
-    Volt::route('/create-members', 'admin.members.create')
-    ->name('members.create');
-    Volt::route('/edit-members', 'admin.members.edit')
-    ->name('members.edit');
+
+    Volt::route('/categories', 'admin.category')
+        ->name('category');
 
     Volt::route('/books', 'admin.buku')
         ->name('buku');
+
+    Volt::route('/peminjamans', 'admin.peminjaman')
+        ->name('peminjaman');
+
+    Volt::route('/monitoring-stok', 'admin.stock-monitoring')
+        ->name('stock-monitoring');
 });
 
 //User

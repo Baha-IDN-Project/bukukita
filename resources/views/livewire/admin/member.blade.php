@@ -1,104 +1,394 @@
 <?php
-use Livewire\Volt\Component;
-use Livewire\WithPagination;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
 
-new class extends Component {
+use Livewire\Volt\Component;
+use App\Models\User;
+use Livewire\WithPagination;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Database\QueryException;
+
+// Komponen Volt
+new class extends Component
+{
     use WithPagination;
 
-    // Fungsi 'with' akan otomatis dipanggil
-    // untuk mengambil data yang dibutuhkan oleh view
+    // Properti untuk Form
+    public string $name = ''; // Sesuai standar User model (user minta 'nama')
+    public string $email = '';
+    public string $role = 'member'; // Default role
+
+    // Properti untuk Password
+    public string $password = '';
+    public string $password_confirmation = '';
+
+    // Properti untuk State Update
+    public ?User $editingUser = null;
+
+    /**
+     * Terapkan validasi.
+     */
+    protected function rules()
+    {
+        return [
+            // Gunakan 'name' sesuai model User standar
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($this->editingUser?->id),
+            ],
+            'role' => ['required', 'string', Rule::in(['admin', 'member'])], // Asumsi 2 role ini
+
+            // Password: Wajib saat Create, Opsional saat Update
+            'password' => [
+                $this->editingUser ? 'nullable' : 'required', // Opsional saat edit
+                'string',
+                'min:8',
+                'confirmed', // Otomatis cek 'password_confirmation'
+            ],
+        ];
+    }
+
+    /**
+     * Pesan validasi kustom (Opsional)
+     */
+    protected $messages = [
+        'name.required' => 'Nama tidak boleh kosong.',
+        'email.required' => 'Email tidak boleh kosong.',
+        'email.unique' => 'Email ini sudah terdaftar.',
+        'password.required' => 'Password tidak boleh kosong.',
+        'password.min' => 'Password minimal 8 karakter.',
+        'password.confirmed' => 'Konfirmasi password tidak cocok.',
+    ];
+
+    /**
+     * Mengambil data untuk view.
+     */
     public function with(): array
     {
         return [
-            // Ambil data user, urutkan, dan paginasi
-            'users' => User::orderBy('name', 'asc')->paginate(10),
+            // Ambil semua user, KECUALI admin yang sedang login
+            // (Agar admin tidak bisa menghapus/mengedit dirinya sendiri)
+            'users' => User::where('id', '!=', auth()->id())
+                           ->orderBy('name', 'asc')
+                           ->paginate(10),
         ];
+    }
+
+    /**
+     * Method untuk CREATE dan UPDATE.
+     */
+    public function save()
+    {
+        $validated = $this->validate();
+
+        try {
+            // Siapkan data utama
+            $data = [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'role' => $validated['role'],
+            ];
+
+            // --- Logika Password (PENTING) ---
+            // Hanya update password JIKA diisi.
+            // Jika kosong saat edit, password lama tetap aman.
+            if (!empty($validated['password'])) {
+                $data['password'] = Hash::make($validated['password']);
+            }
+
+            if ($this->editingUser) {
+                // --- UPDATE ---
+                $this->editingUser->update($data);
+                session()->flash('success', 'Data member berhasil diperbarui.');
+            } else {
+                // --- CREATE ---
+                // Pastikan password di-hash saat create
+                // (Validasi 'required' sudah memastikan $validated['password'] ada)
+                $data['password'] = Hash::make($validated['password']);
+                User::create($data);
+                session()->flash('success', 'Member baru berhasil ditambahkan.');
+            }
+
+            // Reset form setelah sukses
+            $this->resetForm();
+
+        } catch (QueryException $e) {
+            session()->flash('error', 'Terjadi kesalahan database.');
+        }
+    }
+
+    /**
+     * (UPDATE) Menyiapkan form untuk mode edit.
+     */
+    public function edit(User $user)
+    {
+        $this->editingUser = $user;
+
+        // Isi form dengan data yang ada
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->role = $user->role;
+
+        // Kosongkan field password
+        $this->reset('password', 'password_confirmation');
+        $this->resetErrorBag();
+    }
+
+    /**
+     * (DELETE) Menghapus member.
+     */
+    public function delete(User $user)
+    {
+        // Keamanan ekstra: cegah penghapusan diri sendiri
+        if ($user->id === auth()->id()) {
+            session()->flash('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+            return;
+        }
+
+        try {
+            $userName = $user->name;
+            $user->delete();
+            session()->flash('success', 'Member "' . $userName . '" berhasil dihapus.');
+
+            // Reset form jika yang dihapus adalah yang sedang diedit
+            if ($this->editingUser && $this->editingUser->id === $user->id) {
+                $this->resetForm();
+            }
+
+        } catch (QueryException $e) {
+            session()->flash('error', 'Member tidak bisa dihapus, mungkin terkait data peminjaman.');
+        }
+    }
+
+    /**
+     * Helper untuk membatalkan mode edit / reset form.
+     */
+    public function cancelEdit()
+    {
+        $this->resetForm();
+    }
+
+    /**
+     * Helper internal untuk mereset semua properti form.
+     */
+    private function resetForm()
+    {
+        $this->reset('name', 'email', 'role', 'password', 'password_confirmation');
+        $this->role = 'member'; // Kembalikan ke default
+        $this->editingUser = null;
+        $this->resetErrorBag();
     }
 }; ?>
 
 {{--
-  Wrapper utama dengan padding, background putih, sudut membulat, dan shadow.
-  Ini memberikan tampilan "card" yang modern.
+======================================================================
+    BAGIAN VIEW (HTML/BLADE)
+======================================================================
 --}}
-<div class="bg-white dark:bg-gray-900 shadow-md rounded-lg p-6 md:p-8">
+<div>
+    <main class="flex-1 p-6 lg:p-10">
+        {{-- HEADER --}}
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                Manajemen Member
+            </h1>
+            <p class="mt-1 text-gray-600 dark:text-gray-400">
+                Tambah, edit, dan hapus akun member perpustakaan.
+            </p>
+        </header>
 
-    {{-- Judul Halaman dan Tombol Create --}}
-    {{-- Menggunakan flexbox untuk mensejajarkan judul dan tombol --}}
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 sm:mb-0">
-            Manajemen User
-        </h1>
+        {{-- NOTIFIKASI --}}
+        <div class="mb-6">
+            @if (session('success'))
+                <div class="p-4 rounded-md bg-green-100 text-green-800 border border-green-200"
+                     x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" x-transition>
+                    {{ session('success') }}
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="p-4 rounded-md bg-red-100 text-red-800 border border-red-200"
+                     x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" x-transition>
+                    {{ session('error') }}
+                </div>
+            @endif
+        </div>
 
-        {{-- Tombol "Tambah User" dengan styling primer (biru) --}}
-        <a href="{{ route('admin.members.create') }}" wire:navigate
-            class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-semibold text-sm text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-offset-gray-900 transition ease-in-out duration-150">
-            {{-- Ikon plus sederhana untuk visual --}}
-            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Tambah User Baru
-        </a>
-    </div>
+        {{-- KARTU STATISTIK --}}
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+            <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Member</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $users->total() }}</p>
+                    </div>
+                    <span class="p-3 bg-green-100 rounded-full dark:bg-green-900">
+                        <svg class="w-6 h-6 text-green-600 dark:text-green-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+        </div>
 
-    {{-- Wrapper tabel agar responsif (bisa di-scroll horizontal di layar kecil) --}}
-    <div class="overflow-x-auto relative shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-        {{-- Tabel untuk menampilkan data --}}
-        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            {{-- Header Tabel --}}
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                <tr>
-                    <th scope="col" class="px-6 py-3">Nama</th>
-                    <th scope="col" class="px-6 py-3">Email</th>
-                    <th scope="col" class="px-6 py-3">Bergabung</th>
-                    <th scope="col" class="px-6 py-3">Aksi</th>
-                </tr>
-            </thead>
+        {{-- AREA KONTEN UTAMA (FORM & TABEL) --}}
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
-            {{-- Body Tabel --}}
-            <tbody>
-                @forelse ($users as $user)
-                    {{-- Setiap baris data dengan border-bottom dan efek hover --}}
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                        {{--
-                          Menggunakan `th` dengan `scope="row"` untuk data utama di baris (Nama)
-                          Ini baik untuk aksesibilitas dan styling.
-                        --}}
-                        <th scope="row"
-                            class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            {{ $user->name }}
-                        </th>
-                        <td class="px-6 py-4">
-                            {{ $user->email }}
-                        </td>
-                        <td class="px-6 py-4">
-                            {{ $user->created_at->format('d M Y') }}
-                        </td>
-                        <td class="px-6 py-4">
-                            {{-- Placeholder untuk tombol Aksi --}}
-                            <a href="{{ route('admin.members.create') }}" wire:navigate class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
-                            <span class="mx-1 text-gray-300 dark:text-gray-600">|</span>
-                            <a href="#" class="font-medium text-red-600 dark:text-red-500 hover:underline">Delete</a>
-                        </td>
-                    </tr>
-                @empty
-                    {{-- Tampilan jika data kosong --}}
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                        <td colspan="4" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                            Tidak ada data user.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+            {{-- Kolom Kiri: FORM CREATE & UPDATE --}}
+            <div class="lg:col-span-1">
+                <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ $editingUser ? 'Edit Member' : 'Tambah Member Baru' }}
+                    </h3>
 
-    {{-- Link Pagination --}}
-    {{-- Laravel pagination biasanya sudah ter-style oleh Tailwind jika di-setup dengan benar --}}
-    <div class="mt-6">
-        {{ $users->links() }}
-    </div>
+                    {{-- Form --}}
+                    <form wire:submit="save" class="space-y-4">
 
+                        {{-- Nama --}}
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama</label>
+                            <input type="text" id="name" wire:model="name"
+                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('name') border-red-500 @enderror"
+                                   placeholder="Nama Lengkap Member">
+                            @error('name') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- Email --}}
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                            <input type="email" id="email" wire:model="email"
+                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('email') border-red-500 @enderror"
+                                   placeholder="email@contoh.com">
+                            @error('email') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- Role --}}
+                        <div>
+                            <label for="role" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                            <select id="role" wire:model="role"
+                                    class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('role') border-red-500 @enderror">
+                                <option value="member">Member</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            @error('role') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        <hr class="dark:border-gray-700">
+
+                        {{-- Password --}}
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                            <input type="password" id="password" wire:model="password"
+                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('password') border-red-500 @enderror"
+                                   placeholder="{{ $editingUser ? 'Isi untuk ganti password' : 'Minimal 8 karakter' }}">
+                            @error('password') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- Konfirmasi Password --}}
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Konfirmasi Password</label>
+                            <input type="password" id="password_confirmation" wire:model="password_confirmation"
+                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   placeholder="Ulangi password">
+                        </div>
+
+
+                        {{-- Tombol Aksi Form --}}
+                        <div class="flex items-center space-x-3 pt-2">
+                            @if ($editingUser)
+                                <button type="submit"
+                                        class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                                    Update Member
+                                </button>
+                                <button type="button" wire:click="cancelEdit"
+                                        class="w-full px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md dark:bg-gray-600 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                                    Batal
+                                </button>
+                            @else
+                                <button type="submit"
+                                        class="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                                    Simpan Member Baru
+                                </button>
+                            @endif
+                        </div>
+
+                        <div wire:loading wire:target="save">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">Menyimpan...</span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {{-- Kolom Kanan: TABEL DAFTAR MEMBER --}}
+            <div class="lg:col-span-2">
+                <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Daftar Member & Admin</h3>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-full text-left align-middle">
+                            <thead class="border-b border-gray-200 dark:border-gray-700">
+                                <tr class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
+                                    <th class="px-4 py-3">No.</th>
+                                    <th class="px-4 py-3">Nama</th>
+                                    <th class="px-4 py-3">Email</th>
+                                    <th class="px-4 py-3">Role</th>
+                                    <th class="px-4 py-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                @forelse ($users as $user)
+                                    <tr wire:key="{{ $user->id }}" class="text-sm text-gray-900 dark:text-white">
+                                        {{-- Nomor urut --}}
+                                        <td class="px-4 py-3">
+                                            {{ ($users->currentPage() - 1) * $users->perPage() + $loop->iteration }}
+                                        </td>
+                                        <td class="px-4 py-3 font-medium">{{ $user->name }}</td>
+                                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $user->email }}</td>
+                                        <td class="px-4 py-3">
+                                            @if ($user->role == 'admin')
+                                                <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                    Admin
+                                                </span>
+                                            @else
+                                                <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                    Member
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-right font-medium space-x-2">
+                                            <button type="button" wire:click="edit({{ $user->id }})"
+                                                    class="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-md hover:bg-yellow-600">
+                                                Edit
+                                            </button>
+                                            <button
+                                                type="button"
+                                                wire:click="delete({{ $user->id }})"
+                                                wire:confirm="Anda yakin ingin menghapus '{{ $user->name }}'? Ini tidak bisa dibatalkan."
+                                                class="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">
+                                                Hapus
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                            Belum ada data member.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{-- Link Paginasi --}}
+                    <div class="mt-6">
+                        {{ $users->links() }}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
 </div>
