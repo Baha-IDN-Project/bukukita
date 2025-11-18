@@ -24,5 +24,9 @@
             {{ __('Monitoring Stock') }}
         </flux:navlist.item>
 
+        <flux:navlist.item icon="book-open-text" :href="route('admin.review')" :current="request()->routeIs('admin.review')" wire:navigate>
+            {{ __('Manajemen Review') }}
+        </flux:navlist.item>
+
     </flux:navlist.group>
 </flux:navlist>

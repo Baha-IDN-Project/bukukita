@@ -1,43 +1,59 @@
 <?php
+
 use App\Models\User;
 use App\Models\Book;
-use App\Models\Peminjaman; // Diubah dari Loan
-use App\Models\Category; // Asumsi Anda memiliki model Category
+use App\Models\Peminjaman;
+use App\Models\Category;
+use App\Models\Review; // 1. Ditambahkan Model Review
 use function Livewire\Volt\layout;
 use function Livewire\Volt\with;
 
 // Mengatur layout utama
 layout('components.layouts.app');
 
-// Menggunakan 'with' untuk mengambil data. Ini akan dievaluasi ulang
-// setiap kali komponen di-refresh (termasuk oleh wire:poll)
+// Menggunakan 'with' untuk mengambil data
 with(function () {
+    // 3. Logika untuk data chart (Peminjaman 7 hari terakhir)
+    $chartLabels = collect();
+    $chartData = collect();
+    for ($i = 6; $i >= 0; $i--) {
+        $date = now()->subDays($i);
+        $chartLabels->push($date->format('M d')); // Label: Nov 18
+        $chartData->push(
+            Peminjaman::whereDate('created_at', $date->toDateString())->count()
+        );
+    }
+
     return [
         'totalMembers' => User::count(),
         'totalBooks' => Book::count(),
-        'totalCategories' => Category::count(), // Statistik tambahan seperti yang Anda minta
-        'totalOnLoan' => Peminjaman::whereNull('tanggal_harus_kembali')->count(), // Diubah dari Loan
+        'totalCategories' => Category::count(),
+        'totalReviews' => Review::count(), // 2. Ditambahkan Total Reviews
+        'totalOnLoan' => Peminjaman::whereNull('tanggal_harus_kembali')->count(),
 
         // Data untuk tabel aktivitas terkini
-        'recentPeminjaman' => Peminjaman::with(['user', 'book']) // Diubah dari Loan dan recentLoans
-                            ->latest() // Urutkan berdasarkan terbaru
-                            ->take(5) // Ambil 5 data terakhir
-                            ->get()
+        'recentPeminjaman' => Peminjaman::with(['user', 'book'])
+                            ->latest()
+                            ->take(5)
+                            ->get(),
+
+        // Data untuk chart
+        'chartLabels' => $chartLabels,
+        'chartData' => $chartData,
     ];
 });
 
-// Aksi untuk tombol "Tindakan Cepat"
-$bukaModalTambahBuku = fn() => $this->dispatch('open-modal', 'tambah-buku');
-$bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota');
+// 4. Aksi "Tindakan Cepat" dihapus
+// $bukaModalTambahBuku = ... (dihapus)
+// $bukaModalTambahAnggota = ... (dihapus)
 
 ?>
 
-    {{--
-      Konten Halaman
-      Kita tambahkan `wire:poll.15s` di sini untuk me-refresh seluruh
-      komponen (termasuk semua statistik) setiap 15 detik.
-    --}}
-<main class="flex-1 p-6 lg:p-10" wire:poll.15s>
+{{--
+  Konten Halaman
+  'wire:poll' dipindahkan dari <main> ke grid masing-masing
+--}}
+<main class="flex-1 p-6 lg:p-10">
     <header class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
             Dashboard Perpustakaan
@@ -49,16 +65,15 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
 
     {{--
       Grid Statistik
-      Saya mengubahnya menjadi 5 kolom untuk mengakomodasi "Total Kategori"
+      Menjadi 5 kolom dan ditambahkan wire:poll
     --}}
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5" wire:poll.15s>
 
         {{-- Widget 1: Total Buku --}}
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Judul Buku</p>
-                    {{-- Data dinamis dari 'with()' --}}
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalBooks }}</p>
                 </div>
                 <span class="p-3 bg-blue-100 rounded-full dark:bg-blue-900">
@@ -74,7 +89,6 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Anggota</p>
-                    {{-- Data dinamis dari 'with()' --}}
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalMembers }}</p>
                 </div>
                 <span class="p-3 bg-green-100 rounded-full dark:bg-green-900">
@@ -90,7 +104,6 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Buku Dipinjam</p>
-                    {{-- Data dinamis dari 'with()' --}}
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalOnLoan }}</p>
                 </div>
                 <span class="p-3 bg-yellow-100 rounded-full dark:bg-yellow-900">
@@ -101,55 +114,92 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
             </div>
         </div>
 
-        {{-- Widget 4: Total Kategori (Sesuai permintaan) --}}
+        {{-- Widget 4: Total Kategori --}}
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Kategori</p>
-                    {{-- Data dinamis dari 'with()' --}}
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalCategories }}</p>
                 </div>
                 <span class="p-3 bg-purple-100 rounded-full dark:bg-purple-900">
-                    {{-- Icon baru untuk kategori (tags) --}}
                     <svg class="w-6 h-6 text-purple-600 dark:text-purple-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.703.542.923-.33 1.54-1.26.91-2.124l-9.58-9.581a2.25 2.25 0 010-3.182z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v.008" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.703.542.923-.33 1.54-1.26.91-2.124l-9.58-9.581a2.25 2.25 0 010-3.182z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v.008" />
                     </svg>
                 </span>
             </div>
         </div>
 
-        {{-- Widget 5: Lewat Batas (dari template, datanya dinamis) --}}
+        {{-- Widget 5: Total Ulasan (BARU) --}}
+        <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Ulasan</p>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalReviews }}</p>
+                </div>
+                <span class="p-3 bg-pink-100 rounded-full dark:bg-pink-900">
+                    {{-- Icon baru untuk ulasan --}}
+                    <svg class="w-6 h-6 text-pink-600 dark:text-pink-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-3.86 8.25-8.625 8.25a8.62 8.62 0 01-8.625-8.25C3.75 7.444 7.64 3.75 12.375 3.75c4.766 0 8.625 3.694 8.625 8.25z" />
+                    </svg>
+                </span>
+            </div>
+        </div>
 
     </div>
 
     <div class="grid grid-cols-1 gap-6 mt-8 lg:grid-cols-3">
 
-        {{-- Panel Tindakan Cepat (Aksi sudah di-wire) --}}
+        {{-- Panel Grafik Peminjaman (MENGGANTIKAN Tindakan Cepat) --}}
         <div class="lg:col-span-1">
-            <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-                <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Tindakan Cepat</h3>
-                <div class="flex flex-col space-y-3">
-                    {{-- Tombol ini sekarang memanggil aksi Volt --}}
-                    <button wire:click="bukaModalTambahBuku" class="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
-                        Tambah Buku Baru
-                    </button>
-                    <button wire:click="bukaModalTambahAnggota" class="w-full px-4 py-2 font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
-                        Registrasi Anggota
-                    </button>
-                    {{-- Anda bisa mengubah ini menjadi wire:click atau biarkan sebagai link --}}
-                    <a href="#" class="w-full px-4 py-2 font-medium text-center text-gray-900 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600">
-                        Proses Peminjaman
-                    </a>
-                    <a href="#" class="w-full px-4 py-2 font-medium text-center text-gray-900 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600">
-                        Proses Pengembalian
-                    </a>
-                </div>
+            <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800"
+                 {{--
+                   Inisialisasi Alpine.js untuk chart.
+                   Data diambil dari PHP menggunakan @js()
+                   wire:ignore penting agar Livewire tidak merusak canvas
+                 --}}
+                 wire:ignore
+                 x-data
+                 x-init="
+                    new Chart($refs.loanChart, {
+                        type: 'line',
+                        data: {
+                            labels: @js($chartLabels),
+                            datasets: [{
+                                label: 'Peminjaman Baru',
+                                data: @js($chartData),
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                tension: 0.3,
+                                fill: true,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1 // Hanya tampilkan angka bulat (1, 2, 3... bukan 1.5)
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false // Sembunyikan legenda
+                                }
+                            }
+                        }
+                    })
+                 "
+            >
+                <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Peminjaman 7 Hari Terakhir</h3>
+                <canvas x-ref="loanChart"></canvas>
             </div>
         </div>
 
         {{-- Panel Aktivitas Terkini (Dibuat Dinamis) --}}
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-2" wire:poll.15s> {{-- wire:poll hanya untuk bagian ini --}}
             <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
                 <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Aktivitas Peminjaman Terkini</h3>
                 <div class="overflow-x-auto">
@@ -163,14 +213,12 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
                             </tr>
                         </thead>
                         <tbody class="divide-y dark:divide-gray-700">
-                            {{-- Loop dinamis menggunakan data dari 'with()' --}}
-                            @forelse ($recentPeminjaman as $peminjaman) {{-- Diubah dari $recentLoans as $loan --}}
+                            @forelse ($recentPeminjaman as $peminjaman)
                                 <tr classs="text-gray-900 dark:text-white">
-                                    <td class="py-3">{{ $peminjaman->user->name ?? 'N/A' }}</td> {{-- Diubah dari $loan --}}
-                                    <td class="py-3">{{ $peminjaman->book->title ?? 'N/A' }}</td> {{-- Diubah dari $loan --}}
+                                    <td class="py-3">{{ $peminjaman->user->name ?? 'N/A' }}</td>
+                                    <td class="py-3">{{ $peminjaman->book->title ?? 'N/A' }}</td>
                                     <td class="py-3">
-                                        {{-- Logika untuk status badge --}}
-                                        @if ($peminjaman->tanggal_harus_kembali) {{-- Diubah dari $loan --}}
+                                        @if ($peminjaman->tanggal_harus_kembali)
                                             <span class="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-200">
                                                 Dikembalikan
                                             </span>
@@ -181,12 +229,10 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
                                         @endif
                                     </td>
                                     <td class="py-3 text-sm text-gray-500">
-                                        {{-- Tampilkan waktu yang mudah dibaca --}}
-                                        {{ $peminjaman->created_at->diffForHumans() }} {{-- Diubah dari $loan --}}
+                                        {{ $peminjaman->created_at->diffForHumans() }}
                                     </td>
                                 </tr>
                             @empty
-                                {{-- Kondisi jika tidak ada data --}}
                                 <tr class="text-gray-900 dark:text-white">
                                     <td colspan="4" class="py-3 text-center text-gray-500 dark:text-gray-400">
                                         Belum ada aktivitas peminjaman.
@@ -201,3 +247,11 @@ $bukaModalTambahAnggota = fn() => $this->dispatch('open-modal', 'tambah-anggota'
 
     </div>
 </main>
+
+{{--
+  Tambahkan ini di akhir file,
+  atau pastikan layout utama Anda memuat Chart.js
+--}}
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+@endpush

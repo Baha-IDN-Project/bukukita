@@ -35,6 +35,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Volt::route('/monitoring-stok', 'admin.stock-monitoring')
         ->name('stock-monitoring');
+
+    Volt::route('/reviews', 'admin.review')
+        ->name('review');
 });
 
 //User
