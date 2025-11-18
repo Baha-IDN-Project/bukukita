@@ -42,7 +42,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
 //User
 Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(function () {
+
     Volt::route('dashboard', 'user.dashboard')->name('dashboard');
+
+    Volt::route('koleksi', 'user.koleksi')->name('koleksi');
+
+    Volt::route('rak', 'user.rak')->name('rak');
 });
 
 //All User

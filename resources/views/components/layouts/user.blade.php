@@ -27,9 +27,9 @@
             @endif
 
             {{-- 3. Ini adalah slot untuk konten utama halaman (isi dashboard Anda) --}}
-            <div class="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {{ $slot }}
-            </div>
+
+            {{ $slot }}
+
 
         </flux:main>
 
