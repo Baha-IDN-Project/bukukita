@@ -40,9 +40,7 @@
                         <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{{ $pendingCount }}</p>
                     </div>
                     <span class="p-3 bg-yellow-100 rounded-full dark:bg-yellow-900">
-                        <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
                     </span>
                 </div>
             </div>
@@ -52,10 +50,8 @@
                         <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Sedang Dipinjam</p>
                         <p class="text-3xl font-bold text-blue-600 dark:text-blue-500">{{ $dipinjamCount }}</p>
                     </div>
-                    <span class="p-3 bg-blue-100 rounded-full dark:bg-blue-900">
-                        <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                        </svg>
+                    <span class="p-3 bg-blue-100 rounded-full dark:bg-purple-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-down-icon lucide-book-down"><path d="M12 13V7"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="m9 10 3 3 3-3"/></svg>
                     </span>
                 </div>
             </div>

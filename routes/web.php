@@ -48,6 +48,8 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Volt::route('koleksi', 'user.koleksi')->name('koleksi');
 
     Volt::route('rak', 'user.rak')->name('rak');
+
+    Volt::route('buku/{book:slug}', 'user.buku-detail')->name('buku.detail');
 });
 
 //All User

@@ -5,27 +5,27 @@
         </flux:navlist.item>
 
         <flux:navlist.item icon="users" :href="route('admin.member')" :current="request()->routeIs('admin.member')" wire:navigate>
-            {{ __('Manajemen Member') }}
+            {{ __('Member') }}
         </flux:navlist.item>
 
-        <flux:navlist.item icon="users" :href="route('admin.category')" :current="request()->routeIs('admin.category')" wire:navigate>
-            {{ __('Manajemen Kategori') }}
+        <flux:navlist.item icon="clipboard" :href="route('admin.category')" :current="request()->routeIs('admin.category')" wire:navigate>
+            {{ __('Kategori') }}
         </flux:navlist.item>
 
-        <flux:navlist.item icon="book-open-text" :href="route('admin.buku')" :current="request()->routeIs('admin.buku')" wire:navigate>
-            {{ __('Manajemen Buku') }}
+        <flux:navlist.item icon="book-open" :href="route('admin.buku')" :current="request()->routeIs('admin.buku')" wire:navigate>
+            {{ __('Buku') }}
         </flux:navlist.item>
 
-        <flux:navlist.item icon="book-open-text" :href="route('admin.peminjaman')" :current="request()->routeIs('admin.peminjaman')" wire:navigate>
-            {{ __('Manajemen Peminjaman') }}
+        <flux:navlist.item icon="folder-plus" :href="route('admin.peminjaman')" :current="request()->routeIs('admin.peminjaman')" wire:navigate>
+            {{ __('Peminjaman') }}
         </flux:navlist.item>
 
-        <flux:navlist.item icon="book-open-text" :href="route('admin.stock-monitoring')" :current="request()->routeIs('admin.stock-monitoring')" wire:navigate>
-            {{ __('Monitoring Stock') }}
+        <flux:navlist.item icon="tv" :href="route('admin.stock-monitoring')" :current="request()->routeIs('admin.stock-monitoring')" wire:navigate>
+            {{ __('Stok Buku') }}
         </flux:navlist.item>
 
         <flux:navlist.item icon="book-open-text" :href="route('admin.review')" :current="request()->routeIs('admin.review')" wire:navigate>
-            {{ __('Manajemen Review') }}
+            {{ __('Review') }}
         </flux:navlist.item>
 
     </flux:navlist.group>

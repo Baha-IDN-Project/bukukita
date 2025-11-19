@@ -43,16 +43,8 @@ with(function () {
     ];
 });
 
-// 4. Aksi "Tindakan Cepat" dihapus
-// $bukaModalTambahBuku = ... (dihapus)
-// $bukaModalTambahAnggota = ... (dihapus)
-
 ?>
 
-{{--
-  Konten Halaman
-  'wire:poll' dipindahkan dari <main> ke grid masing-masing
---}}
 <main class="flex-1 p-6 lg:p-10">
     <header class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
@@ -63,23 +55,17 @@ with(function () {
         </p>
     </header>
 
-    {{--
-      Grid Statistik
-      Menjadi 5 kolom dan ditambahkan wire:poll
-    --}}
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5" wire:poll.15s>
 
         {{-- Widget 1: Total Buku --}}
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Judul Buku</p>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Buku</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalBooks }}</p>
                 </div>
                 <span class="p-3 bg-blue-100 rounded-full dark:bg-blue-900">
-                    <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.185 0 4.236.638 6 1.756 1.764-1.118 3.815-1.756 6-1.756 2.185 0 4.236.638 6 1.756V4.262c-.938-.332-1.948-.512-3-.512-2.185 0-4.236.638-6 1.756z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open-icon lucide-book-open"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
                 </span>
             </div>
         </div>
@@ -88,13 +74,11 @@ with(function () {
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Anggota</p>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Member</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalMembers }}</p>
                 </div>
                 <span class="p-3 bg-green-100 rounded-full dark:bg-green-900">
-                    <svg class="w-6 h-6 text-green-600 dark:text-green-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users-icon lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>
                 </span>
             </div>
         </div>
@@ -103,13 +87,11 @@ with(function () {
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Buku Dipinjam</p>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Peminjaman</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalOnLoan }}</p>
                 </div>
                 <span class="p-3 bg-yellow-100 rounded-full dark:bg-yellow-900">
-                    <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-down-icon lucide-book-down"><path d="M12 13V7"/><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="m9 10 3 3 3-3"/></svg>
                 </span>
             </div>
         </div>
@@ -118,14 +100,11 @@ with(function () {
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Kategori</p>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Kategori</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalCategories }}</p>
                 </div>
                 <span class="p-3 bg-purple-100 rounded-full dark:bg-purple-900">
-                    <svg class="w-6 h-6 text-purple-600 dark:text-purple-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.703.542.923-.33 1.54-1.26.91-2.124l-9.58-9.581a2.25 2.25 0 010-3.182z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v.008" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-stacked-icon lucide-chart-column-stacked"><path d="M11 13H7"/><path d="M19 9h-4"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="15" y="5" width="4" height="12" rx="1"/><rect x="7" y="8" width="4" height="9" rx="1"/></svg>
                 </span>
             </div>
         </div>
@@ -134,14 +113,12 @@ with(function () {
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Total Ulasan</p>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Ulasan</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalReviews }}</p>
                 </div>
                 <span class="p-3 bg-pink-100 rounded-full dark:bg-pink-900">
                     {{-- Icon baru untuk ulasan --}}
-                    <svg class="w-6 h-6 text-pink-600 dark:text-pink-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-3.86 8.25-8.625 8.25a8.62 8.62 0 01-8.625-8.25C3.75 7.444 7.64 3.75 12.375 3.75c4.766 0 8.625 3.694 8.625 8.25z" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-more-icon lucide-message-square-more"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 11h.01"/><path d="M16 11h.01"/><path d="M8 11h.01"/></svg>
                 </span>
             </div>
         </div>

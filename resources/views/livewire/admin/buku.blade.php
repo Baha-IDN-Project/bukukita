@@ -19,6 +19,7 @@ new class extends Component
     // Properti untuk Form
     public string $judul = '';
     public string $penulis = '';
+    public string $deskripsi = ''; // <<< TAMBAH: Properti untuk Deskripsi
     public $category_id = ''; // Akan diisi oleh <select>
     public int $lisensi = 1; // Sesuai default di migrasi
     public string $slug = '';
@@ -41,11 +42,13 @@ new class extends Component
             'category_id' => ['required', 'exists:categories,id'],
             'judul' => ['required', 'string', 'max:255'],
             'penulis' => ['nullable', 'string', 'max:255'],
+            'deskripsi' => ['nullable', 'string', 'max:5000'], // <<< ATURAN: Validasi deskripsi
             'lisensi' => ['required', 'integer', 'min:1'],
             'slug' => [
                 'required',
                 'string',
                 'max:100',
+                // Perbaikan: Mengabaikan ID buku saat edit agar validasi unik tidak gagal
                 Rule::unique('books')->ignore($this->editingBook?->id),
             ],
             // Aturan validasi file
@@ -54,12 +57,12 @@ new class extends Component
                 $this->editingBook ? 'nullable' : 'required',
                 'file',
                 'mimes:pdf,epub', // Sesuaikan dengan format ebook Anda
-                'max:20480', // max 20MB (sesuaikan)
+                'max:20480', // max 20MB
             ],
             'gambar_cover' => [
                 'nullable', // Cover boleh kosong
                 'image',
-                'max:2048', // max 2MB (sesuaikan)
+                'max:2048', // max 2MB
             ],
         ];
     }
@@ -70,7 +73,10 @@ new class extends Component
      */
     public function updatedJudul($value)
     {
-        $this->slug = Str::slug($value);
+        // Perbaikan: Hanya buat slug baru jika bukan dalam mode edit ATAU judul berbeda
+        if (!$this->editingBook || $this->editingBook->judul !== $value) {
+            $this->slug = Str::slug($value);
+        }
     }
 
     /**
@@ -91,8 +97,15 @@ new class extends Component
      */
     public function save()
     {
-        // Validasi data
+        // Validasi data (termasuk slug yang di-ignore saat edit)
         $validated = $this->validate();
+
+        // Data yang akan disimpan ke database
+        $dataToSave = $validated;
+
+        // Hapus properti file dari data yang akan di-save (agar tidak menimpa dengan null jika tidak di-upload)
+        unset($dataToSave['file_ebook']);
+        unset($dataToSave['gambar_cover']);
 
         try {
             // --- Handle File Uploads ---
@@ -104,7 +117,7 @@ new class extends Component
                     Storage::disk('public')->delete($this->editingBook->file_ebook);
                 }
                 // Simpan file baru dan dapatkan path-nya
-                $validated['file_ebook'] = $this->file_ebook->store('ebooks', 'public');
+                $dataToSave['file_ebook'] = $this->file_ebook->store('ebooks', 'public');
             }
 
             // 2. Handle Gambar Cover
@@ -114,17 +127,17 @@ new class extends Component
                     Storage::disk('public')->delete($this->editingBook->gambar_cover);
                 }
                 // Simpan file baru dan dapatkan path-nya
-                $validated['gambar_cover'] = $this->gambar_cover->store('covers', 'public');
+                $dataToSave['gambar_cover'] = $this->gambar_cover->store('covers', 'public');
             }
 
             // --- Database Operation ---
             if ($this->editingBook) {
                 // --- UPDATE ---
-                $this->editingBook->update($validated);
+                $this->editingBook->update($dataToSave);
                 session()->flash('success', 'Buku berhasil diperbarui.');
             } else {
                 // --- CREATE ---
-                Book::create($validated);
+                Book::create($dataToSave);
                 session()->flash('success', 'Buku berhasil ditambahkan.');
             }
 
@@ -132,7 +145,8 @@ new class extends Component
             $this->resetForm();
 
         } catch (QueryException $e) {
-            session()->flash('error', 'Terjadi kesalahan database. Pastikan slug unik.');
+            // Menangkap error database (misalnya jika slug tetap tidak unik karena alasan lain)
+            session()->flash('error', 'Terjadi kesalahan database: ' . Str::limit($e->getMessage(), 100));
         } catch (\Exception $e) {
             session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
@@ -149,6 +163,7 @@ new class extends Component
         $this->category_id = $book->category_id;
         $this->judul = $book->judul;
         $this->penulis = $book->penulis;
+        $this->deskripsi = $book->deskripsi ?? ''; // <<< ISI: Deskripsi saat edit
         $this->lisensi = $book->lisensi;
         $this->slug = $book->slug;
 
@@ -207,7 +222,8 @@ new class extends Component
      */
     private function resetForm()
     {
-        $this->reset('judul', 'penulis', 'category_id', 'lisensi', 'slug', 'file_ebook', 'gambar_cover', 'existing_file_ebook', 'existing_gambar_cover');
+        // <<< RESET: Tambahkan deskripsi
+        $this->reset('judul', 'penulis', 'deskripsi', 'category_id', 'lisensi', 'slug', 'file_ebook', 'gambar_cover', 'existing_file_ebook', 'existing_gambar_cover');
         $this->lisensi = 1; // Kembalikan ke default
         $this->editingBook = null;
         $this->resetErrorBag();
@@ -235,13 +251,13 @@ new class extends Component
         <div class="mb-6">
             @if (session('success'))
                 <div class="p-4 rounded-md bg-green-100 text-green-800 border border-green-200"
-                     x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" x-transition>
+                    x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" x-transition>
                     {{ session('success') }}
                 </div>
             @endif
             @if (session('error'))
                 <div class="p-4 rounded-md bg-red-100 text-red-800 border border-red-200"
-                     x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" x-transition>
+                    x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" x-transition>
                     {{ session('error') }}
                 </div>
             @endif
@@ -256,9 +272,7 @@ new class extends Component
                         <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $books->total() }}</p>
                     </div>
                     <span class="p-3 bg-blue-100 rounded-full dark:bg-blue-900">
-                        <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.185 0 4.236.638 6 1.756 1.764-1.118 3.815-1.756 6-1.756 2.185 0 4.236.638 6 1.756V4.262c-.938-.332-1.948-.512-3-.512-2.185 0-4.236.638-6 1.756z" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open-icon lucide-book-open"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
                     </span>
                 </div>
             </div>
@@ -281,8 +295,8 @@ new class extends Component
                         <div>
                             <label for="judul" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Judul</label>
                             <input type="text" id="judul" wire:model.live="judul"
-                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('judul') border-red-500 @enderror"
-                                   placeholder="Judul Buku">
+                                class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('judul') border-red-500 @enderror"
+                                placeholder="Judul Buku">
                             @error('judul') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
                         </div>
 
@@ -290,8 +304,8 @@ new class extends Component
                         <div>
                             <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Slug</label>
                             <input type="text" id="slug" wire:model="slug" readonly
-                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-400 sm:text-sm"
-                                   placeholder="Akan terisi otomatis">
+                                class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-400 sm:text-sm"
+                                placeholder="Akan terisi otomatis">
                             @error('slug') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
                         </div>
 
@@ -299,9 +313,18 @@ new class extends Component
                         <div>
                             <label for="penulis" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Penulis</label>
                             <input type="text" id="penulis" wire:model="penulis"
-                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('penulis') border-red-500 @enderror"
-                                   placeholder="Nama Penulis">
+                                class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('penulis') border-red-500 @enderror"
+                                placeholder="Nama Penulis">
                             @error('penulis') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- DESKRIPSI (FIELD BARU) --}}
+                        <div>
+                            <label for="deskripsi" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Deskripsi</label>
+                            <textarea id="deskripsi" wire:model="deskripsi" rows="4"
+                                class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('deskripsi') border-red-500 @enderror"
+                                placeholder="Tulis deskripsi singkat buku..."></textarea>
+                            @error('deskripsi') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
                         </div>
 
                         {{-- Kategori --}}
@@ -321,7 +344,7 @@ new class extends Component
                         <div>
                             <label for="lisensi" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lisensi (Jumlah Salinan)</label>
                             <input type="number" id="lisensi" wire:model="lisensi" min="1"
-                                   class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('lisensi') border-red-500 @enderror">
+                                class="block w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm @error('lisensi') border-red-500 @enderror">
                             @error('lisensi') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
                         </div>
 
@@ -329,10 +352,16 @@ new class extends Component
                         <div>
                             <label for="file_ebook" class="block text-sm font-medium text-gray-700 dark:text-gray-300">File Ebook (PDF/EPUB)</label>
                             <input type="file" id="file_ebook" wire:model="file_ebook"
-                                   class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 @error('file_ebook') border-red-500 @enderror">
+                                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 @error('file_ebook') border-red-500 @enderror">
                             <div wire:loading wire:target="file_ebook" class="text-sm text-blue-600 mt-1">Mengunggah file...</div>
-                            @if ($existing_file_ebook && !$file_ebook)
-                                <p class="text-sm text-gray-500 mt-1">File saat ini: <span class="font-medium">{{ Str::limit($existing_file_ebook, 30) }}</span></p>
+                            @if ($editingBook)
+                                <p class="text-xs text-gray-500 mt-1">
+                                    @if ($existing_file_ebook && !$file_ebook)
+                                        File saat ini: <span class="font-medium">{{ Str::limit(basename($existing_file_ebook), 30) }}</span>
+                                    @else
+                                        Pilih file baru untuk mengganti file lama.
+                                    @endif
+                                </p>
                             @endif
                             @error('file_ebook') <span class="text-red-600 text-sm mt-1">{{ $message }}</span> @enderror
                         </div>
@@ -341,7 +370,7 @@ new class extends Component
                         <div>
                             <label for="gambar_cover" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gambar Cover (Opsional)</label>
                             <input type="file" id="gambar_cover" wire:model="gambar_cover" accept="image/*"
-                                   class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 @error('gambar_cover') border-red-500 @enderror">
+                                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 @error('gambar_cover') border-red-500 @enderror">
                             <div wire:loading wire:target="gambar_cover" class="text-sm text-blue-600 mt-1">Mengunggah gambar...</div>
 
                             {{-- Preview Gambar --}}
@@ -358,16 +387,16 @@ new class extends Component
                         <div class="flex items-center space-x-3 pt-2">
                             @if ($editingBook)
                                 <button type="submit"
-                                        class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                                         class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
                                     Update Buku
                                 </button>
                                 <button type="button" wire:click="cancelEdit"
-                                        class="w-full px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md dark:bg-gray-600 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                                         class="w-full px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md dark:bg-gray-600 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
                                     Batal
                                 </button>
                             @else
                                 <button type="submit"
-                                        class="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                                         class="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
                                     Simpan Buku Baru
                                 </button>
                             @endif
@@ -392,7 +421,7 @@ new class extends Component
                                 <tr class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                     <th class="px-4 py-3">No.</th>
                                     <th class="px-4 py-3">Cover</th>
-                                    <th class="px-4 py-3">Judul</th>
+                                    <th class="px-4 py-3">Judul & Penulis</th>
                                     <th class="px-4 py-3">Kategori</th>
                                     <th class="px-4 py-3">Lisensi</th>
                                     <th class="px-4 py-3 text-right">Aksi</th>
@@ -401,7 +430,6 @@ new class extends Component
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                 @forelse ($books as $book)
                                     <tr wire:key="{{ $book->id }}" class="text-sm text-gray-900 dark:text-white">
-                                        {{-- Sesuai permintaan: "kecualikan id-nya" (pakai nomor urut) --}}
                                         <td class="px-4 py-3">
                                             {{ ($books->currentPage() - 1) * $books->perPage() + $loop->iteration }}
                                         </td>
@@ -415,6 +443,11 @@ new class extends Component
                                         <td class="px-4 py-3">
                                             <div class="font-medium">{{ $book->judul }}</div>
                                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ $book->penulis ?? 'N/A' }}</div>
+                                            @if($book->deskripsi)
+                                                <div class="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">
+                                                    {{ Str::limit($book->deskripsi, 50) }}
+                                                </div>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3">
                                             <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -424,7 +457,7 @@ new class extends Component
                                         <td class="px-4 py-3">{{ $book->lisensi }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-right font-medium space-x-2">
                                             <button type="button" wire:click="edit({{ $book->id }})"
-                                                    class="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-md hover:bg-yellow-600">
+                                                     class="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-md hover:bg-yellow-600">
                                                 Edit
                                             </button>
                                             <button

@@ -174,10 +174,7 @@ new class extends Component
                         <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $categories->total() }}</p>
                     </div>
                     <span class="p-3 bg-blue-100 rounded-full dark:bg-blue-900">
-                        {{-- Icon untuk kategori (tag) --}}
-                        {{-- <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.73.53m-10.23-4.538L12.5 11.25m-1.25 0c-.621 0-1.125-.504-1.125-1.125S10.629 9 11.25 9s1.125.504 1.125 1.125S11.871 11.25 11.25 11.25z" />
-                        </svg> --}}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-stacked-icon lucide-chart-column-stacked"><path d="M11 13H7"/><path d="M19 9h-4"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="15" y="5" width="4" height="12" rx="1"/><rect x="7" y="8" width="4" height="9" rx="1"/></svg>
                     </span>
                 </div>
             </div>

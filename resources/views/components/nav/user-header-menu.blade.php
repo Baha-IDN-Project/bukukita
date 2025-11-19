@@ -7,7 +7,7 @@
         {{ __('Koleksi Buku') }}
     </flux:navbar.item>
 
-    <flux:navbar.item icon="book-open-text" :href="route('user.rak')" :current="request()->routeIs('user.rak')" wire:navigate>
+    <flux:navbar.item icon="book-open" :href="route('user.rak')" :current="request()->routeIs('user.rak')" wire:navigate>
         {{ __('Rak Pinjam') }}
     </flux:navbar.item>
 </flux:navbar>
