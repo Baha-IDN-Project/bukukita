@@ -136,6 +136,7 @@
                                 <tr class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                     <th class="px-4 py-3">Member</th>
                                     <th class="px-4 py-3">Buku</th>
+                                    <th class="px-4 py-3">Stok Sisa</th>
                                     <th class="px-4 py-3">Tanggal</th>
                                     <th class="px-4 py-3">Status</th>
                                     <th class="px-4 py-3 text-right">Aksi</th>
@@ -148,10 +149,20 @@
                                             <div class="font-medium">{{ $peminjaman->user->name ?? 'User Dihapus' }}</div>
                                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ $peminjaman->user->email ?? '-' }}</div>
                                         </td>
+
                                         <td class="px-4 py-3">
                                             <div class="font-medium">{{ $peminjaman->book->judul ?? 'Buku Dihapus' }}</div>
                                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ $peminjaman->book->penulis ?? '-' }}</div>
                                         </td>
+                                        <td class="px-4 py-3 text-center">
+                                            {{-- Tampilkan Stok yang tersisa --}}
+                                            @php
+                                                $stok_sisa = ($peminjaman->book->lisensi ?? 0) - ($peminjaman->book->jumlah_dipinjam ?? 0);
+                                            @endphp
+                                            <span class="font-bold {{ $stok_sisa > 0 ? 'text-green-500' : 'text-red-500' }}">{{ $stok_sisa }}</span>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">/ {{ $peminjaman->book->lisensi ?? 0 }}</div>
+                                        </td>
+                                        <td class="px-4 py-3">
                                         <td class="px-4 py-3">
                                             <div class="font-medium">Pinjam: {{ $peminjaman->tanggal_pinjam ? $peminjaman->tanggal_pinjam->format('d M Y') : '-' }}</div>
                                             <div class="text-xs text-gray-500 dark:text-gray-400">Kembali: {{ $peminjaman->tanggal_harus_kembali ? $peminjaman->tanggal_harus_kembali->format('d M Y') : '-' }}</div>
@@ -309,38 +320,62 @@ new class extends Component
      * Menyetujui peminjaman yang 'pending'.
      */
     public function approve(Peminjaman $peminjaman)
-    {
-        if ($peminjaman->status === 'pending') {
-            $peminjaman->update([
-                'status' => 'dipinjam',
-                'tanggal_pinjam' => Carbon::now()->toDateString(),
-                'tanggal_harus_kembali' => Carbon::now()->addDays(7)->toDateString(), // Asumsi 7 hari
-            ]);
-            session()->flash('success', 'Peminjaman disetujui. Buku siap diambil.');
-        }
+{
+    // Cek dulu apakah masih ada lisensi sebelum disetujui
+    if ($peminjaman->book->jumlah_dipinjam >= $peminjaman->book->lisensi) {
+        session()->flash('error', 'Gagal: Stok buku ' . $peminjaman->book->judul . ' sudah habis (Lisensi: ' . $peminjaman->book->lisensi . ').');
+        return;
     }
 
-    /**
-     * Menolak peminjaman yang 'pending'.
-     */
-    public function reject(Peminjaman $peminjaman)
-    {
-        if ($peminjaman->status === 'pending') {
-            $peminjaman->update(['status' => 'ditolak']);
-            session()->flash('success', 'Peminjaman ditolak.');
-        }
-    }
+    if ($peminjaman->status === 'pending') {
+        // 1. Update status Peminjaman
+        $peminjaman->update([
+            'status' => 'dipinjam',
+            'tanggal_pinjam' => Carbon::now()->toDateString(),
+            'tanggal_harus_kembali' => Carbon::now()->addDays(7)->toDateString(), // Asumsi 7 hari
+        ]);
 
-    /**
-     * Menandai buku yang 'dipinjam' sebagai 'selesai' (telah dikembalikan).
-     */
+        // 2. KURANGI STOK yang tersedia (yaitu TAMBAH jumlah_dipinjam)
+        $peminjaman->book->increment('jumlah_dipinjam');
+
+        session()->flash('success', 'Peminjaman disetujui. Buku siap diambil.');
+    } else {
+        session()->flash('warning', 'Peminjaman tidak dalam status Pending.');
+    }
+}
+
+/**
+ * Menolak peminjaman yang 'pending'.
+ */
+public function reject(Peminjaman $peminjaman)
+{
+    // Tidak ada perubahan stok, hanya ganti status.
+    if ($peminjaman->status === 'pending') {
+        $peminjaman->update(['status' => 'ditolak']);
+        session()->flash('success', 'Peminjaman ditolak.');
+    } else {
+        session()->flash('warning', 'Peminjaman tidak dalam status Pending.');
+    }
+}
+
+/**
+ * Menandai buku yang 'dipinjam' sebagai 'selesai' (telah dikembalikan).
+ */
     public function markAsReturned(Peminjaman $peminjaman)
     {
         if ($peminjaman->status === 'dipinjam') {
-            // Migrasi Anda tidak punya 'tanggal_kembali_aktual',
-            // jadi kita hanya ubah statusnya.
+            // 1. Update status Peminjaman
             $peminjaman->update(['status' => 'selesai']);
+
+            // 2. TAMBAH STOK yang tersedia (yaitu KURANGI jumlah_dipinjam)
+            // Pastikan jumlah_dipinjam tidak menjadi negatif
+            if ($peminjaman->book->jumlah_dipinjam > 0) {
+                $peminjaman->book->decrement('jumlah_dipinjam');
+            }
+
             session()->flash('success', 'Buku telah ditandai sebagai selesai/dikembalikan.');
+        } else {
+            session()->flash('warning', 'Buku tidak dalam status Dipinjam.');
         }
     }
 

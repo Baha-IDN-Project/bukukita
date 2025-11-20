@@ -46,37 +46,43 @@ class extends Component {
         return null; // Belum meminjam
     }
 
+    // Hitung stok tersedia sekali untuk digunakan di Blade
+    #[Computed]
+    public function stokTersedia()
+    {
+        return $this->book->lisensi - $this->book->jumlah_dipinjam;
+    }
+
     public function pinjamBuku()
     {
         // 1. Validasi: Apakah stok (lisensi) habis?
-        // Kita asumsikan 'lisensi' adalah jumlah stok buku fisik/digital license
-        $jumlahDipinjam = Peminjaman::where('book_id', $this->book->id)
-            ->where('status', 'dipinjam')
-            ->count();
+        $stokTersedia = $this->stokTersedia; // Menggunakan computed property
 
-        if ($jumlahDipinjam >= $this->book->lisensi) {
-            $this->dispatch('notify', message: 'Maaf, stok buku ini sedang habis dipinjam.', type: 'error');
+        if ($stokTersedia <= 0) {
+            session()->flash('error', 'Maaf, stok buku ini sedang habis dipinjam (semua lisensi terpakai).');
+            $this->redirect(route('user.koleksi'), navigate: true); // Redirect ke halaman koleksi setelah notif error
             return;
         }
 
         // 2. Validasi: Apakah user sudah meminjam?
         if ($this->currentStatus) {
-             $this->dispatch('notify', message: 'Anda sedang meminjam buku ini.', type: 'warning');
-             return;
+            session()->flash('warning', 'Anda sudah memiliki permintaan peminjaman yang aktif untuk buku ini: ' . ucfirst($this->currentStatus));
+            $this->redirect(route('user.rak'), navigate: true);
+            return;
         }
 
-        // 3. Proses Peminjaman
+        // 3. Proses Peminjaman (Default status: 'pending')
         Peminjaman::create([
             'user_id' => Auth::id(),
             'book_id' => $this->book->id,
-            'tanggal_pinjam' => now(),
-            'tanggal_harus_kembali' => now()->addDays(7), // Default 7 hari pinjam
-            'status' => 'pending', // Default pending, tunggu approve admin
+            'tanggal_pinjam' => null, // Admin yang akan mengisi saat approve
+            'tanggal_harus_kembali' => null, // Admin yang akan mengisi saat approve
+            'status' => 'pending', // Wajib pending, tunggu approve admin
         ]);
 
         // Refresh halaman / Tampilkan notifikasi
-        session()->flash('message', 'Permintaan peminjaman berhasil dibuat. Menunggu persetujuan admin.');
-        $this->redirect(route('user.rak-pinjam'), navigate: true);
+        session()->flash('success', 'Permintaan peminjaman berhasil dibuat. Menunggu persetujuan admin.');
+        $this->redirect(route('user.rak'), navigate: true);
     }
 
     public function getCoverUrl($gambarCover)
@@ -102,8 +108,8 @@ class extends Component {
             <div class="w-full md:w-1/3 lg:w-1/4 flex-shrink-0">
                 <div class="aspect-[3/4] overflow-hidden rounded-lg shadow-lg border border-gray-600 relative group">
                     <img src="{{ $this->getCoverUrl($this->book->gambar_cover) }}"
-                         alt="{{ $this->book->judul }}"
-                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                        alt="{{ $this->book->judul }}"
+                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
 
                     {{-- Badge Kategori --}}
                     <div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full border border-white/10">
@@ -126,10 +132,18 @@ class extends Component {
                             {{ number_format($this->book->reviews->avg('rating'), 1) }} <span class="text-xs text-gray-500 font-normal">/ 5</span>
                         </div>
                     </div>
+
+                    {{-- BLOK KODE 1: Stok Tersedia (Telah diimplementasikan) --}}
                     <div>
-                        <span class="block text-xs text-gray-500 uppercase tracking-wider">Stok</span>
-                        <span class="text-white font-bold text-lg">{{ $this->book->lisensi }} <span class="text-xs text-gray-500 font-normal">copy</span></span>
+                        <span class="block text-xs text-gray-500 uppercase tracking-wider">Stok Tersedia</span>
+                        {{-- Menggunakan Computed Property $this->stokTersedia yang telah ditambahkan di atas --}}
+                        <span class="text-white font-bold text-lg {{ $this->stokTersedia <= 0 ? 'text-red-500' : '' }}">
+                            {{ $this->stokTersedia }}
+                            <span class="text-xs text-gray-500 font-normal">/ {{ $this->book->lisensi }} copy</span>
+                        </span>
                     </div>
+
+                    {{-- Menghapus duplikasi Tombol Aksi yang ada di sini di kode asli --}}
                 </div>
 
                 {{-- Sinopsis --}}
@@ -140,15 +154,19 @@ class extends Component {
                     </p>
                 </div>
 
-                {{-- Tombol Aksi --}}
+                {{-- BLOK KODE 2: Tombol Aksi (Telah diimplementasikan) --}}
                 <div class="mt-auto">
-                    @if($this->currentStatus === 'pending')
+                    @if($this->stokTersedia <= 0)
+                        <button disabled class="w-full md:w-auto bg-gray-500/20 text-gray-400 border border-gray-500/50 px-6 py-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2">
+                            Stok Habis
+                        </button>
+                    @elseif($this->currentStatus === 'pending')
                         <button disabled class="w-full md:w-auto bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-6 py-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center gap-2">
                             <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             Menunggu Persetujuan
                         </button>
                     @elseif($this->currentStatus === 'dipinjam')
-                         <a href="{{ route('user.rak-pinjam') }}" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20">
+                        <a href="{{ route('user.rak') }}" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                             Buka E-Book
                         </a>
@@ -161,6 +179,8 @@ class extends Component {
                         </button>
                     @endif
                 </div>
+
+                {{-- Menghapus Tombol Aksi yang ada di bawah Sinopsis di kode asli (digantikan oleh BLOK KODE 2) --}}
             </div>
         </div>
     </div>
