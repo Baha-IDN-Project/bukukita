@@ -92,8 +92,13 @@ class extends Component {
         <div>
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-gray-100">Buku Terbaru</h2>
-                <a href="#" class="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+                <a href="#" class="group flex items-center gap-1 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
                     Lihat Semua
+                    {{-- Heroicon Outline: Arrow Long Right --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                        class="size-4 transition-transform duration-300 group-hover:translate-x-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                    </svg>
                 </a>
             </div>
             <div class="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
@@ -137,8 +142,13 @@ class extends Component {
         <div>
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-gray-100">Rating Tertinggi</h2>
-                <a href="#" class="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+                <a href="#" class="group flex items-center gap-1 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
                     Lihat Semua
+                    {{-- Heroicon Outline: Arrow Long Right --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                        class="size-4 transition-transform duration-300 group-hover:translate-x-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                    </svg>
                 </a>
             </div>
             <div class="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
@@ -170,11 +180,12 @@ class extends Component {
                         <p class="text-sm text-gray-400">
                             {{ $book->penulis ?? 'N/A' }}
                         </p>
-                        <div class="flex items-center mt-1">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#DAA520" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-star w-4 h-4">
-                                <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" fill="#DAA520"/>
+                        <div class="flex items-center gap-1 mt-1">
+                            {{-- Heroicon Solid: Star --}}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4 text-yellow-500">
+                                <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" />
                             </svg>
-                            <span class="text-gray-200 font-bold text-sm ml-1">
+                            <span class="text-gray-200 font-bold text-xs">
                                 {{ number_format($book->reviews_avg_rating, 1) }}
                             </span>
                         </div>
@@ -190,8 +201,13 @@ class extends Component {
         <div>
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-gray-100">Jelajahi Kategori</h2>
-                <a href="#" class="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+                <a href="#" class="group flex items-center gap-1 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
                     Lihat Semua
+                    {{-- Heroicon Outline: Arrow Long Right --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                        class="size-4 transition-transform duration-300 group-hover:translate-x-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                    </svg>
                 </a>
             </div>
 

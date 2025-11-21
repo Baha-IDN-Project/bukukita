@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
+use App\Http\Controllers\EbookController;
 
 // welcome page publik
 Volt::route('/', 'home')->name('home');
@@ -50,6 +51,8 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Volt::route('rak', 'user.rak')->name('rak');
 
     Volt::route('buku/{book:slug}', 'user.buku-detail')->name('buku.detail');
+
+    Volt::route('baca/{book:slug}', 'user.read')->name('baca');
 });
 
 //All User
@@ -68,4 +71,5 @@ Route::middleware(['auth'])->group(function () {
             ),
         )
         ->name('two-factor.show');
+    Route::get('book/stream/{book:slug}', [EbookController::class, 'streamPDF'])->name('book.stream');
 });

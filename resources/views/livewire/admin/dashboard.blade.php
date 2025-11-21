@@ -100,7 +100,7 @@ with(function () {
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Sedang Dipinjam</p>
+                    <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Dipinjam</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalOnLoan }}</p>
                 </div>
                 <span class="p-3 bg-yellow-100 rounded-full dark:bg-yellow-900">

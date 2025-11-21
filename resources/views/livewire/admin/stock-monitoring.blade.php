@@ -3,21 +3,18 @@
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use App\Models\Book; // Pastikan model Book Anda ada di sini
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\Book;
+
 
 new class extends Component
 {
-    /**
-     * Mengambil data buku yang stoknya menipis.
-     * Metode 'with' ini akan otomatis mengirimkan variabel $books ke view.
-     */
     public function with(): array
     {
         return [
-            'books' => Book::where('lisensi', '<', 5) // Sesuai permintaan: stok < 5 (mencakup 0)
-                            ->orderBy('lisensi', 'asc') // Tampilkan yang stoknya 0 di paling atas
-                            ->get()
+            // Logic: Mengambil buku yang Total Lisensinya (Aset) kurang dari 5
+            'books' => Book::where('lisensi', '<', 5)
+                        ->orderBy('lisensi', 'asc') // Prioritaskan yang 0
+                        ->get()
         ];
     }
 }; ?>
@@ -30,7 +27,7 @@ new class extends Component
                 Pemantauan Stok Buku
             </h1>
             <p class="mt-1 text-gray-600 dark:text-gray-400">
-                Daftar buku yang stoknya menipis (kurang dari 5) atau telah habis.
+                Daftar buku yang total lisensinya menipis (kurang dari 5) dan perlu pengadaan ulang.
             </p>
         </header>
 
@@ -39,78 +36,72 @@ new class extends Component
             <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Buku Stok Menipis</p>
-                        {{-- Menggunakan count() pada collection $books --}}
+                        <p class="text-sm font-medium text-gray-500 uppercase dark:text-gray-400">Perlu Restock</p>
                         <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ $books->count() }}</p>
                     </div>
-                    {{-- Ikon diganti menjadi ikon peringatan --}}
                     <span class="p-3 bg-yellow-100 rounded-full dark:bg-yellow-900">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-600 dark:text-yellow-400"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                     </span>
                 </div>
             </div>
-            {{-- Anda bisa menambahkan kartu statistik lain di sini jika diperlukan --}}
         </div>
 
-        {{-- AREA KONTEN UTAMA (TABEL STOK) --}}
-        {{-- Dibungkus dengan card seperti di contoh kedua --}}
+        {{-- TABEL --}}
         <div class="p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Daftar Buku Stok Menipis</h3>
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Daftar Buku Kritis</h3>
 
             <div class="overflow-x-auto">
-                {{-- Menggunakan style tabel dari contoh kedua --}}
                 <table class="w-full min-w-full text-left align-middle">
                     <thead class="border-b border-gray-200 dark:border-gray-700">
                         <tr class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                             <th class="px-4 py-3">Judul Buku</th>
                             <th class="px-4 py-3">Penulis</th>
-                            <th class="px-4 py-3">Stok Saat Ini</th>
+                            <th class="px-4 py-3 text-center">Total Lisensi</th>
+                            <th class="px-4 py-3 text-center">Sedang Dipinjam</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-
-                        {{-- Loop data buku menggunakan @forelse (dari file asli) --}}
                         @forelse ($books as $book)
-                            <tr wire:key="{{ $book->id }}" class="text-sm text-gray-900 dark:text-white">
-                                <td class="px-4 py-3 font-medium">{{ $book->title }}</td>
-                                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $book->author ?? '-' }}</td>
-                                <td class="px-4 py-3">
+                            <tr wire:key="{{ $book->id }}" class="text-sm text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                {{-- PERBAIKAN: Menggunakan 'judul' bukan 'title' --}}
+                                <td class="px-4 py-3 font-medium">{{ $book->judul }}</td>
 
-                                    {{-- Menggunakan style badge yang lebih kecil (seperti di contoh 2) --}}
+                                {{-- PERBAIKAN: Menggunakan 'penulis' bukan 'author' --}}
+                                <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $book->penulis ?? '-' }}</td>
+
+                                <td class="px-4 py-3 text-center">
                                     @if ($book->lisensi == 0)
-                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                            HABIS (0)
+                                        <span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                            KOSONG (0)
                                         </span>
                                     @else
-                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                                             {{ $book->lisensi }}
                                         </span>
                                     @endif
+                                </td>
 
+                                {{-- Tambahan Info: Menampilkan jumlah yang sedang dipinjam agar Admin tau sisa real --}}
+                                <td class="px-4 py-3 text-center text-gray-500">
+                                    {{ $book->jumlah_dipinjam }}
                                 </td>
                             </tr>
                         @empty
-                            {{-- Tampilan jika tidak ada buku --}}
                             <tr>
-                                <td colspan="3" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    {{-- Menggunakan style @empty dari file asli, sudah bagus --}}
-                                    <div class="py-8">
-                                        <svg class="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <td colspan="4" class="px-4 py-8 text-center">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg class="h-12 w-12 text-green-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <h3 class="mt-2 text-lg font-medium text-green-700">Stok Aman!</h3>
-                                        <p class="mt-1 text-sm">Tidak ada buku yang stoknya menipis saat ini.</p>
+                                        <h3 class="text-lg font-medium text-green-700 dark:text-green-400">Stok Aman!</h3>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Semua buku memiliki lisensi lebih dari 5.</p>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
-
                     </tbody>
                 </table>
             </div>
-
-            {{-- Bagian Paginasi tidak diperlukan karena file asli menggunakan ->get() bukan ->paginate() --}}
         </div>
-
     </main>
 </div>
