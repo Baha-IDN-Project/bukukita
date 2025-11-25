@@ -3,11 +3,10 @@
 use Livewire\Volt\Component;
 use App\Models\Book;
 use App\Models\Peminjaman;
-use Livewire\Attributes\Layout; // <--- PENTING
+use Livewire\Attributes\Layout;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
-// PENTING: Ganti layout ke layout 'reader' yang baru kita buat
 new #[Layout('components.layouts.reader')] class extends Component {
     public Book $book;
     public $pdfUrl;
@@ -16,7 +15,7 @@ new #[Layout('components.layouts.reader')] class extends Component {
     {
         $this->book = $book;
 
-        // Validasi Akses (Tetap Sama)
+        // Validasi Akses (Logic kamu sudah benar, saya pertahankan)
         $hasAccess = Peminjaman::where('user_id', Auth::id())
             ->where('book_id', $this->book->id)
             ->where('status', 'dipinjam')
@@ -26,23 +25,27 @@ new #[Layout('components.layouts.reader')] class extends Component {
             })
             ->exists();
 
-        if (!$hasAccess) {
-            session()->flash('error', 'Akses ditolak.');
-            return redirect()->route('user.dashboard');
+        if (Auth::user()->role === 'admin') {
+            $hasAccess = true;
         }
 
-        // Generate URL ke Controller Stream
+        if (!$hasAccess) {
+            session()->flash('error', 'Akses ditolak atau masa pinjam habis.');
+            return redirect()->route('user.rak');
+        }
+
         $this->pdfUrl = route('book.stream', ['book' => $this->book->slug]);
     }
 };
 ?>
 
-<div class="flex flex-col h-screen" x-data="pdfViewer()">
+{{-- Ganti seluruh <div> sampai </script> paling bawah dengan kode ini --}}
 
-    {{-- Header Reader --}}
-    <div class="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 shadow-md z-10">
+<div class="flex flex-col h-screen bg-gray-900" x-data="pdfViewer()">
+
+    {{-- 1. Header Navigation --}}
+    <div class="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 shadow-md z-30 relative">
         <div class="flex items-center gap-4">
-            {{-- Tombol Kembali (Langsung ke Dashboard, Full Reload agar Script Flux Refresh) --}}
             <a href="{{ route('user.rak') }}" class="text-gray-300 hover:text-white transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
@@ -50,140 +53,198 @@ new #[Layout('components.layouts.reader')] class extends Component {
                 {{ $book->judul }}
             </h1>
         </div>
-
-        {{-- Kontrol Halaman --}}
-        <div class="flex items-center gap-2 md:gap-4 bg-gray-700 rounded-lg px-2 py-1">
-            <button @click="prevPage" class="p-1 hover:bg-gray-600 rounded disabled:opacity-50" :disabled="pageNum <= 1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            </button>
-
-            <span class="text-sm font-mono">
-                <span x-text="pageNum"></span> / <span x-text="totalPage || '...'"></span>
-            </span>
-
-            <button @click="nextPage" class="p-1 hover:bg-gray-600 rounded disabled:opacity-50" :disabled="pageNum >= totalPage">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </button>
+        <div class="bg-gray-700 rounded-lg px-3 py-1 text-sm font-mono text-white shadow-inner">
+            Halaman <span x-text="currentPage"></span> / <span x-text="totalPage || '...'"></span>
         </div>
     </div>
 
-    {{-- Area Baca (Canvas PDF) --}}
-    <div class="flex-1 overflow-auto bg-gray-900 relative flex justify-center p-4 md:p-8 pdf-container" id="main-scroll">
+    {{-- 2. Area Scroll PDF --}}
+    <div class="flex-1 overflow-y-auto relative bg-gray-900 scroll-smooth" id="pdf-scroll-container">
 
-        {{-- Loading State --}}
-        <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-20">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+        {{-- Loading --}}
+        <div x-show="loading" class="absolute inset-0 flex items-center justify-center z-20 h-full pt-20 pointer-events-none">
+            <div class="flex flex-col items-center bg-gray-800 p-4 rounded-lg shadow-lg">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-2"></div>
+                <span class="text-gray-300 text-sm">Memuat PDF...</span>
+            </div>
         </div>
 
-        {{-- Error State --}}
-        <div x-show="error" style="display: none;" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 z-20">
-            <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <p x-text="errorMessage"></p>
+        {{-- Error --}}
+        <div x-show="error" style="display: none;" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 z-20 p-4 pt-20">
+             <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+             <p x-text="errorMessage" class="text-center font-semibold"></p>
+             <p class="text-sm text-gray-500 mt-2">Cek Console (F12) untuk detail error.</p>
         </div>
 
-        {{-- Canvas PDF --}}
-        <canvas id="the-canvas" class="shadow-2xl"></canvas>
+        {{-- Container Halaman --}}
+        <div id="pages-container" class="flex flex-col items-center pb-20 pt-4 gap-4 min-h-screen">
+            </div>
     </div>
 
-    {{-- Script Javascript Logic --}}
+    {{-- IMPORT PENTING: Pastikan versi Library & Worker SAMA --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        // Set Worker secara global SEBELUM Alpine jalan
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+
     <script>
         function pdfViewer() {
-            // --- PERBAIKAN UTAMA ---
-            // Simpan objek PDF di variabel lokal (Closure), BUKAN di dalam return object Alpine.
-            // Ini mencegah Alpine mengubahnya menjadi Proxy yang menyebabkan error.
             let pdfDoc = null;
+            let renderObserver = null;
+            let pageObserver = null;
 
             return {
                 url: '{{ $pdfUrl }}',
-                // pdfDoc: null,  <-- HAPUS BARIS INI (Jangan taruh di sini)
-                pageNum: 1,
+                bookId: '{{ $book->id }}',
+                currentPage: 1,
                 totalPage: 0,
-                pageRendering: false,
-                pageNumPending: null,
-                scale: 1.5,
-                canvas: null,
-                ctx: null,
                 loading: true,
                 error: false,
                 errorMessage: '',
 
                 init() {
-                    this.canvas = document.getElementById('the-canvas');
-                    this.ctx = this.canvas.getContext('2d');
+                    // Validasi Library
+                    if (typeof pdfjsLib === 'undefined') {
+                        this.handleError('Library PDF.js gagal dimuat. Cek koneksi internet.');
+                        return;
+                    }
 
-                    // Load Dokumen
-                    pdfjsLib.getDocument(this.url).promise.then((pdfDoc_) => {
-                        // Simpan ke variabel lokal (Raw Object)
+                    console.log("Memulai load PDF dari:", this.url);
+
+                    // Load Dokumen dengan parameter rangeChunkSize agar lebih stabil
+                    const loadingTask = pdfjsLib.getDocument({
+                        url: this.url,
+                        rangeChunkSize: 65536,
+                        disableAutoFetch: false,
+                    });
+
+                    loadingTask.promise.then((pdfDoc_) => {
+                        console.log("PDF Berhasil dimuat. Total halaman:", pdfDoc_.numPages);
                         pdfDoc = pdfDoc_;
-
-                        // Update UI (Hanya ambil angkanya saja yang reaktif)
                         this.totalPage = pdfDoc.numPages;
                         this.loading = false;
-                        this.renderPage(this.pageNum);
+
+                        this.generatePagePlaceholders();
+                        this.restoreReadingPosition();
+
                     }).catch((err) => {
-                        console.error('Error loading PDF:', err);
-                        this.loading = false;
-                        this.error = true;
-                        this.errorMessage = 'Gagal memuat dokumen. File mungkin rusak atau tidak ditemukan.';
+                        console.error('Error Detail:', err);
+
+                        // Deteksi Error Umum
+                        let msg = 'Gagal memuat dokumen PDF.';
+                        if (err.name === 'MissingPDFException') msg = 'File PDF tidak ditemukan.';
+                        if (err.name === 'InvalidPDFException') msg = 'File PDF rusak atau format salah.';
+
+                        this.handleError(msg + ' ' + (err.message || ''));
                     });
                 },
 
-                renderPage(num) {
-                    this.pageRendering = true;
+                generatePagePlaceholders() {
+                    const container = document.getElementById('pages-container');
+                    if(!container) return;
 
-                    // Panggil dari variabel lokal pdfDoc
-                    pdfDoc.getPage(num).then((page) => {
-                        const containerWidth = document.getElementById('main-scroll').clientWidth - 40;
-                        const viewportOriginal = page.getViewport({scale: 1});
+                    this.setupObservers();
 
-                        let responsiveScale = this.scale;
-                        if (viewportOriginal.width > containerWidth) {
-                            responsiveScale = containerWidth / viewportOriginal.width;
-                        }
+                    for (let pageNum = 1; pageNum <= this.totalPage; pageNum++) {
+                        const pageDiv = document.createElement('div');
+                        // Tinggi min-h-[800px] penting agar observer bekerja sebelum canvas dirender
+                        pageDiv.className = 'relative bg-white shadow-lg min-h-[600px] w-full max-w-3xl mb-4';
+                        pageDiv.setAttribute('data-page-number', pageNum);
+                        pageDiv.id = `page-wrapper-${pageNum}`;
 
-                        const viewport = page.getViewport({scale: responsiveScale});
-                        this.canvas.height = viewport.height;
-                        this.canvas.width = viewport.width;
+                        const canvas = document.createElement('canvas');
+                        canvas.id = `page-${pageNum}`;
+                        canvas.className = 'w-full h-auto block';
 
-                        const renderContext = {
-                            canvasContext: this.ctx,
-                            viewport: viewport
-                        };
+                        // Loader Text Sederhana
+                        const loadingText = document.createElement('div');
+                        loadingText.className = 'absolute inset-0 flex items-center justify-center text-gray-400 text-xs z-10';
+                        loadingText.innerText = `Halaman ${pageNum}`;
+                        loadingText.id = `loader-${pageNum}`;
 
-                        const renderTask = page.render(renderContext);
+                        pageDiv.appendChild(loadingText);
+                        pageDiv.appendChild(canvas);
+                        container.appendChild(pageDiv);
 
-                        renderTask.promise.then(() => {
-                            this.pageRendering = false;
-                            if (this.pageNumPending !== null) {
-                                this.renderPage(this.pageNumPending);
-                                this.pageNumPending = null;
-                            }
-                        });
-                    });
-
-                    document.getElementById('main-scroll').scrollTop = 0;
-                },
-
-                queueRenderPage(num) {
-                    if (this.pageRendering) {
-                        this.pageNumPending = num;
-                    } else {
-                        this.renderPage(num);
+                        renderObserver.observe(pageDiv);
+                        pageObserver.observe(pageDiv);
                     }
                 },
 
-                prevPage() {
-                    if (this.pageNum <= 1) return;
-                    this.pageNum--;
-                    this.queueRenderPage(this.pageNum);
+                setupObservers() {
+                    // Observer 1: Render saat terlihat
+                    renderObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const pageNum = parseInt(entry.target.getAttribute('data-page-number'));
+                                this.renderPage(pageNum);
+                                renderObserver.unobserve(entry.target); // Stop observe setelah render
+                            }
+                        });
+                    }, { root: null, rootMargin: '500px' }); // Pre-load 500px sebelumnya
+
+                    // Observer 2: Update nomor halaman saat scroll
+                    pageObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const pageNum = parseInt(entry.target.getAttribute('data-page-number'));
+                                this.currentPage = pageNum;
+                                localStorage.setItem(`book_progress_${this.bookId}`, pageNum);
+                            }
+                        });
+                    }, { threshold: 0.1 });
                 },
 
-                nextPage() {
-                    // Gunakan variabel lokal pdfDoc untuk cek numPages jika perlu,
-                    // tapi this.totalPage sudah kita simpan sebelumnya.
-                    if (this.pageNum >= this.totalPage) return;
-                    this.pageNum++;
-                    this.queueRenderPage(this.pageNum);
+                renderPage(num) {
+                    if(!pdfDoc) return;
+
+                    pdfDoc.getPage(num).then((page) => {
+                        const canvas = document.getElementById(`page-${num}`);
+                        const loader = document.getElementById(`loader-${num}`);
+                        if(!canvas) return;
+
+                        const ctx = canvas.getContext('2d');
+                        const wrapper = document.getElementById(`page-wrapper-${num}`);
+
+                        // Kalkulasi Scale Responsif
+                        const containerWidth = wrapper ? wrapper.clientWidth : 600;
+                        const originalViewport = page.getViewport({ scale: 1 });
+                        const scale = (containerWidth / originalViewport.width);
+
+                        const viewport = page.getViewport({ scale: scale > 2 ? 2 : scale }); // Batasi max scale agar tidak pecah memori
+
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+
+                        // Hapus min-height placeholder setelah ukuran asli diketahui
+                        if(wrapper) wrapper.style.minHeight = 'auto';
+
+                        const renderContext = {
+                            canvasContext: ctx,
+                            viewport: viewport
+                        };
+
+                        page.render(renderContext).promise.then(() => {
+                            if(loader) loader.remove();
+                        });
+                    }).catch(err => console.error(`Error render page ${num}:`, err));
+                },
+
+                restoreReadingPosition() {
+                    const savedPage = localStorage.getItem(`book_progress_${this.bookId}`);
+                    if (savedPage) {
+                        setTimeout(() => {
+                            const target = document.getElementById(`page-wrapper-${savedPage}`);
+                            if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+                        }, 800);
+                    }
+                },
+
+                handleError(msg) {
+                    this.loading = false;
+                    this.error = true;
+                    this.errorMessage = msg;
                 }
             }
         }

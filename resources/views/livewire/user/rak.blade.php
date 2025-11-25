@@ -14,7 +14,6 @@ new #[Layout('components.layouts.user')]
 class extends Component {
 
     // State untuk Tab yang aktif.
-    // #[Url] membuat tab tetap terpilih meski halaman di-refresh.
     #[Url]
     public $tab = 'active';
 
@@ -24,9 +23,9 @@ class extends Component {
     #[Computed]
     public function activeLoans()
     {
-        return Peminjaman::with(['book.category'])
+        return Peminjaman::with(['book.categories'])
             ->where('user_id', Auth::id())
-            ->whereIn('status', ['pending', 'dipinjam']) // Ambil yang pending dan dipinjam
+            ->whereIn('status', ['pending', 'dipinjam'])
             ->orderByDesc('created_at')
             ->get();
     }
@@ -37,7 +36,7 @@ class extends Component {
     #[Computed]
     public function historyLoans()
     {
-        return Peminjaman::with(['book.category'])
+        return Peminjaman::with(['book.categories'])
             ->where('user_id', Auth::id())
             ->whereIn('status', ['selesai', 'ditolak'])
             ->orderByDesc('updated_at')
@@ -60,11 +59,11 @@ class extends Component {
     public function getStatusColor($status)
     {
         return match ($status) {
-            'pending' => 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
-            'dipinjam' => 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50',
-            'selesai' => 'bg-blue-500/20 text-blue-400 border-blue-500/50',
-            'ditolak' => 'bg-red-500/20 text-red-400 border-red-500/50',
-            default => 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+            'pending' => 'bg-yellow-500/10 text-yellow-400 ring-yellow-500/20',
+            'dipinjam' => 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+            'selesai' => 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
+            'ditolak' => 'bg-red-500/10 text-red-400 ring-red-500/20',
+            default => 'bg-gray-500/10 text-gray-400 ring-gray-500/20',
         };
     }
 
@@ -74,197 +73,233 @@ class extends Component {
     }
 }; ?>
 
-<div class="flex h-full w-full flex-col gap-6">
+<div class="min-h-screen bg-gray-950 text-gray-200 font-sans selection:bg-indigo-500 selection:text-white">
 
-    <div class="flex flex-col gap-2">
-        <h1 class="text-2xl font-bold text-white">Rak Peminjaman</h1>
-        <p class="text-gray-400 text-sm">Kelola buku yang sedang Anda pinjam dan lihat riwayat bacaan Anda.</p>
-    </div>
+    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
 
-    <div class="border-b border-gray-700">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-
-            {{-- Tab Active --}}
-            <button wire:click="$set('tab', 'active')"
-                class="{{ $tab === 'active' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300' }}
-                       whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors">
-                Sedang Dipinjam
-                @if($this->activeLoans->count() > 0)
-                    <span class="ml-2 rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-xs font-medium text-indigo-400">
-                        {{ $this->activeLoans->count() }}
-                    </span>
-                @endif
-            </button>
-
-            {{-- Tab History --}}
-            <button wire:click="$set('tab', 'history')"
-                class="{{ $tab === 'history' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300' }}
-                       whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors">
-                Riwayat Peminjaman
-            </button>
-
-            {{-- Tab Reviews --}}
-            <button wire:click="$set('tab', 'reviews')"
-                class="{{ $tab === 'reviews' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300' }}
-                       whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors">
-                Ulasan Saya
-            </button>
-        </nav>
-    </div>
-
-    <div class="mt-2 min-h-[400px]">
-
-        @if($tab === 'active')
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @forelse($this->activeLoans as $loan)
-                    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex shadow-sm hover:shadow-md transition-shadow">
-                        <div class="w-24 sm:w-32 bg-gray-900 shrink-0 relative">
-                             <img src="{{ $this->getCoverUrl($loan->book->gambar_cover) }}"
-                                 alt="{{ $loan->book->judul }}"
-                                 class="h-full w-full object-cover">
-                        </div>
-
-                        <div class="p-4 flex flex-col flex-1">
-                            <div class="mb-2">
-                                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $this->getStatusColor($loan->status) }}">
-                                    {{ ucfirst($loan->status) }}
-                                </span>
-                            </div>
-
-                            <h3 class="text-lg font-semibold text-white line-clamp-2 leading-tight mb-1">
-                                {{ $loan->book->judul }}
-                            </h3>
-                            <p class="text-xs text-gray-400 mb-3">
-                                {{ $loan->book->penulis }}
-                            </p>
-
-                            <div class="mt-auto space-y-1 text-xs text-gray-400 border-t border-gray-700 pt-2">
-                                <div class="flex justify-between">
-                                    <span>Tgl Pinjam:</span>
-                                    <span class="text-gray-300">{{ $loan->tanggal_pinjam ? $loan->tanggal_pinjam->format('d M Y') : '-' }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Batas Kembali:</span>
-                                    <span class="{{ $loan->status == 'dipinjam' && now()->gt($loan->tanggal_harus_kembali) ? 'text-red-400 font-bold' : 'text-gray-300' }}">
-                                        {{ $loan->tanggal_harus_kembali ? $loan->tanggal_harus_kembali->format('d M Y') : '-' }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div class="mt-4">
-                                @if($loan->status == 'dipinjam')
-                                    <a href="#"
-                                       class="block w-full text-center rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                                        Baca E-Book
-                                    </a>
-                                @elseif($loan->status == 'pending')
-                                    <button disabled class="block w-full text-center rounded-lg bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">
-                                        Menunggu Persetujuan
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="col-span-full flex flex-col items-center justify-center py-12 text-center border border-dashed border-gray-700 rounded-xl bg-gray-800/30">
-                        <svg class="w-12 h-12 text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                        <h3 class="text-lg font-medium text-white">Tidak ada buku yang dipinjam</h3>
-                        <p class="text-gray-500 mt-1">Ayo cari buku menarik di koleksi kami!</p>
-                        <a href="{{ route('user.koleksi') }}" class="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
-                            Cari Buku &rarr;
-                        </a>
-                    </div>
-                @endforelse
+        {{-- Header Section: Clean & Minimalist --}}
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
+            <div>
+                <h1 class="text-4xl font-black text-white tracking-tight">Rak Buku Saya</h1>
+                <p class="mt-2 text-gray-400">
+                    Kelola aktivitas membaca dan peminjaman Anda dalam satu tempat.
+                </p>
             </div>
-        @endif
 
-        @if($tab === 'history')
-            <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-700">
-                        <thead class="bg-gray-900/50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Buku</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tgl Pinjam</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tgl Kembali</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-700 bg-gray-800">
-                            @forelse($this->historyLoans as $history)
-                                <tr class="hover:bg-gray-700/50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="h-10 w-8 flex-shrink-0">
-                                                <img class="h-10 w-8 rounded object-cover" src="{{ $this->getCoverUrl($history->book->gambar_cover) }}" alt="">
-                                            </div>
-                                            <div class="ml-4">
-                                                <div class="text-sm font-medium text-white">{{ $history->book->judul }}</div>
-                                                <div class="text-xs text-gray-500">{{ $history->book->category->nama_kategori }}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                        {{ $history->tanggal_pinjam ? $history->tanggal_pinjam->format('d M Y') : '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                        {{ $history->tanggal_harus_kembali ? $history->tanggal_harus_kembali->format('d M Y') : '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $this->getStatusColor($history->status) }}">
-                                            {{ ucfirst($history->status) }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-6 py-8 text-center text-gray-500 text-sm">
-                                        Belum ada riwayat peminjaman.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+            {{-- Quick Stats (Visual Only decoration based on available data) --}}
+            <div class="flex items-center gap-4 text-sm font-medium text-gray-400 bg-gray-900/50 px-4 py-2 rounded-full border border-gray-800">
+                <div class="flex items-center gap-2">
+                    <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
+                    <span>Aktif: {{ $this->activeLoans->count() }}</span>
+                </div>
+                <div class="h-4 w-px bg-gray-700"></div>
+                <div class="flex items-center gap-2">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span>Selesai: {{ $this->historyLoans->where('status', 'dikembalikan')->count() }}</span>
                 </div>
             </div>
-        @endif
+        </div>
 
-        @if($tab === 'reviews')
-             <div class="grid grid-cols-1 gap-4">
-                @forelse($this->myReviews as $review)
-                    <div class="bg-gray-800 rounded-xl border border-gray-700 p-4 flex gap-4">
-                         <img src="{{ $this->getCoverUrl($review->book->gambar_cover) }}"
-                              class="w-16 h-24 object-cover rounded-md shadow-sm shrink-0">
+        {{-- Navigation: Segmented Control Style --}}
+        <div class="mb-8 overflow-x-auto pb-2">
+            <nav class="inline-flex rounded-xl bg-gray-900/80 p-1.5 shadow-inner border border-white/5">
+                {{-- Active Tab --}}
+                <button wire:click="$set('tab', 'active')"
+                    class="{{ $tab === 'active' ? 'bg-gray-800 text-white shadow-md ring-1 ring-white/10' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5' }}
+                           relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 whitespace-nowrap">
+                    <svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    Sedang Dipinjam
+                    @if($this->activeLoans->count() > 0)
+                        <span class="ml-1 rounded-md bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-bold text-indigo-300 border border-indigo-500/20">
+                            {{ $this->activeLoans->count() }}
+                        </span>
+                    @endif
+                </button>
 
-                         <div class="flex-1">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="text-white font-medium">{{ $review->book->judul }}</h4>
-                                    <span class="text-xs text-gray-500">{{ $review->created_at->diffForHumans() }}</span>
-                                </div>
-                                {{-- Bintang Rating --}}
-                                <div class="flex items-center bg-gray-900 rounded-lg px-2 py-1">
-                                    <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.87 5.766a1 1 0 00.95.69h6.05c.969 0 1.372 1.24.588 1.81l-4.89 3.55a1 1 0 00-.364 1.118l1.87 5.766c.3.921-.755 1.688-1.54 1.118l-4.89-3.55a1 1 0 00-1.176 0l-4.89 3.55c-.784.57-1.838-.197-1.54-1.118l1.87-5.766a1 1 0 00-.364-1.118L.587 11.193c-.784-.57-.38-1.81.588-1.81h6.05a1 1 0 00.95-.69L9.049 2.927z"/></svg>
-                                    <span class="ml-1 text-sm font-bold text-white">{{ $review->rating }}</span>
-                                </div>
+                {{-- History Tab --}}
+                <button wire:click="$set('tab', 'history')"
+                    class="{{ $tab === 'history' ? 'bg-gray-800 text-white shadow-md ring-1 ring-white/10' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5' }}
+                           relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 whitespace-nowrap">
+                    <svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Riwayat
+                </button>
+
+                {{-- Reviews Tab --}}
+                <button wire:click="$set('tab', 'reviews')"
+                    class="{{ $tab === 'reviews' ? 'bg-gray-800 text-white shadow-md ring-1 ring-white/10' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5' }}
+                           relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 whitespace-nowrap">
+                    <svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    Ulasan Saya
+                </button>
+            </nav>
+        </div>
+
+        {{-- Content Area --}}
+        <div class="animate-fade-in-up min-h-[500px]">
+
+            {{-- TAB 1: ACTIVE LOANS (Horizontal Dashboard Cards) --}}
+            @if($tab === 'active')
+                <div class="flex flex-col gap-4">
+                    @forelse($this->activeLoans as $loan)
+                        <div class="group relative flex flex-col sm:flex-row overflow-hidden rounded-2xl bg-gray-900/40 border border-white/5 hover:bg-gray-900/80 hover:border-gray-700 transition-all duration-300">
+
+                            {{-- Side Accent Status Bar --}}
+                            <div class="absolute left-0 top-0 bottom-0 w-1 {{ $this->getStatusColor($loan->status) == 'bg-green-100 text-green-800' ? 'bg-emerald-500' : ($this->getStatusColor($loan->status) == 'bg-yellow-100 text-yellow-800' ? 'bg-amber-500' : 'bg-indigo-500') }}"></div>
+
+                            {{-- Image --}}
+                            <div class="sm:w-36 md:w-48 shrink-0 relative bg-gray-800">
+                                <img src="{{ $this->getCoverUrl($loan->book->gambar_cover) }}"
+                                     alt="{{ $loan->book->judul }}"
+                                     class="h-64 sm:h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100">
                             </div>
 
-                            <p class="mt-2 text-sm text-gray-300 italic">
-                                "{{ $review->ulasan }}"
-                            </p>
-                         </div>
-                    </div>
-                @empty
-                     <div class="flex flex-col items-center justify-center py-12 text-center border border-dashed border-gray-700 rounded-xl bg-gray-800/30">
-                        <div class="text-gray-600 mb-2">
-                             <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        </div>
-                        <h3 class="text-lg font-medium text-white">Belum ada ulasan</h3>
-                        <p class="text-gray-500 mt-1">Baca buku dan bagikan pendapatmu!</p>
-                    </div>
-                @endforelse
-             </div>
-        @endif
+                            {{-- Content --}}
+                            <div class="flex-1 p-5 sm:p-6 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <h3 class="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors">
+                                                {{ $loan->book->judul }}
+                                            </h3>
+                                            <p class="text-sm text-gray-400 mt-1">{{ $loan->book->penulis }}</p>
+                                        </div>
+                                        <div class="hidden sm:block">
+                                             <span class="inline-flex items-center rounded-full bg-gray-800 px-3 py-1 text-xs font-medium text-gray-300 ring-1 ring-inset ring-gray-700">
+                                                {{ ucfirst($loan->status) }}
+                                            </span>
+                                        </div>
+                                    </div>
 
+                                    <div class="mt-6 grid grid-cols-2 gap-4 border-t border-gray-800/50 pt-4">
+                                        <div>
+                                            <span class="text-xs uppercase tracking-wider text-gray-500 font-bold">Dipinjam</span>
+                                            <p class="mt-1 font-mono text-sm text-gray-300">{{ $loan->tanggal_pinjam ? $loan->tanggal_pinjam->format('d M Y') : '-' }}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs uppercase tracking-wider text-gray-500 font-bold">Tenggat</span>
+                                            <p class="mt-1 font-mono text-sm {{ $loan->status == 'dipinjam' && now()->gt($loan->tanggal_harus_kembali) ? 'text-red-400 font-bold' : 'text-indigo-300' }}">
+                                                {{ $loan->tanggal_harus_kembali ? $loan->tanggal_harus_kembali->format('d M Y') : '-' }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 flex items-center justify-end gap-3">
+                                    @if($loan->status == 'dipinjam')
+                                        <a href="{{ route('user.baca', $loan->book->slug) }}"
+                                           class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:bg-indigo-500 hover:scale-[1.02]">
+                                            <span>Baca Buku</span>
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                        </a>
+                                    @else
+                                        <button disabled class="inline-flex w-full sm:w-auto items-center justify-center rounded-lg bg-gray-800 border border-gray-700 px-6 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                            Menunggu Persetujuan
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-800 bg-gray-900/30 py-20 text-center">
+                            <div class="h-16 w-16 mb-4 rounded-full bg-gray-800/50 flex items-center justify-center text-gray-500">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                            </div>
+                            <h3 class="text-lg font-medium text-white">Tidak ada pinjaman aktif</h3>
+                            <a href="{{ route('user.koleksi') }}" class="mt-4 text-indigo-400 hover:text-indigo-300 hover:underline">Jelajahi buku baru &rarr;</a>
+                        </div>
+                    @endforelse
+                </div>
+            @endif
+
+            {{-- TAB 2: HISTORY LOANS (Clean Modern List) --}}
+            @if($tab === 'history')
+                <div class="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-400">
+                            <thead class="bg-gray-900 text-xs uppercase font-semibold text-gray-500">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4">Informasi Buku</th>
+                                    <th scope="col" class="px-6 py-4 whitespace-nowrap">Tanggal Pinjam</th>
+                                    <th scope="col" class="px-6 py-4 whitespace-nowrap">Tanggal Kembali</th>
+                                    <th scope="col" class="px-6 py-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                @forelse($this->historyLoans as $history)
+                                    <tr class="hover:bg-gray-800/50 transition-colors">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-4">
+                                                <img class="h-12 w-9 rounded object-cover ring-1 ring-white/10" src="{{ $this->getCoverUrl($history->book->gambar_cover) }}" alt="">
+                                                <div>
+                                                    <div class="font-medium text-white">{{ $history->book->judul }}</div>
+                                                    <div class="text-xs text-gray-500">{{ Str::limit($history->book->penulis, 20) }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap font-mono text-gray-300">
+                                            {{ $history->tanggal_pinjam ? $history->tanggal_pinjam->format('d/m/Y') : '-' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap font-mono text-gray-300">
+                                            {{ $history->tanggal_harus_kembali ? $history->tanggal_harus_kembali->format('d/m/Y') : '-' }}
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <span class="inline-block rounded px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $this->getStatusColor($history->status) }}">
+                                                {{ ucfirst($history->status) }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-12 text-center text-gray-500 italic">
+                                            Belum ada riwayat peminjaman tercatat.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
+            {{-- TAB 3: REVIEWS (Grid Cards) --}}
+            @if($tab === 'reviews')
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @forelse($this->myReviews as $review)
+                        <div class="flex flex-col bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 hover:shadow-lg transition-all">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="{{ $this->getCoverUrl($review->book->gambar_cover) }}" class="h-10 w-10 rounded object-cover ring-1 ring-white/10">
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-200 line-clamp-1">{{ $review->book->judul }}</h4>
+                                        <div class="flex items-center text-yellow-500">
+                                            @for($i=0; $i<5; $i++)
+                                                <svg class="w-3 h-3 {{ $i < $review->rating ? 'fill-current' : 'text-gray-700' }}" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                            @endfor
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-600">{{ $review->created_at->diffForHumans() }}</span>
+                            </div>
+
+                            <div class="relative bg-gray-950/50 p-4 rounded-lg flex-1">
+                                <svg class="absolute top-2 left-2 w-6 h-6 text-gray-800 transform -scale-x-100" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z"></path></svg>
+                                <p class="text-gray-400 text-sm pl-4 relative z-10 italic">"{{ $review->ulasan }}"</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full py-12 text-center text-gray-500 bg-gray-900/30 rounded-xl border border-dashed border-gray-800">
+                            Belum ada ulasan yang Anda buat.
+                        </div>
+                    @endforelse
+                </div>
+            @endif
+
+        </div>
     </div>
 </div>

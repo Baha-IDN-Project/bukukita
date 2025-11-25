@@ -14,8 +14,6 @@ return new class extends Migration
         Schema::create('books', function (Blueprint $table) {
         $table->id();
 
-        $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
-
         $table->string('judul');
         $table->string('penulis')->nullable();
         $table->integer('lisensi')->default(1);

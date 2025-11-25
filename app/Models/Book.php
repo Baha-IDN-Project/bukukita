@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Category;
 
 class Book extends Model
 {
@@ -11,10 +12,10 @@ class Book extends Model
 
     protected $guarded = ['id'];
 
-    // Relasi sesuai ERD
-    public function category()
+    // UBAH: Relasi menjadi BelongsToMany
+    public function categories()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsToMany(Category::class, 'book_category');
     }
 
     public function peminjaman()

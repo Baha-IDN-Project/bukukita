@@ -11,8 +11,9 @@ class Category extends Model
 
     protected $fillable = ['nama_kategori'];
 
+    // Relasi Many-to-Many
     public function books()
     {
-        return $this->hasMany(Book::class);
+        return $this->belongsToMany(Book::class, 'book_category');
     }
 }

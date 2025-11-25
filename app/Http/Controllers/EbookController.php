@@ -3,45 +3,49 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
-use App\Models\Peminjaman;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Peminjaman;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class EbookController extends Controller
 {
     public function streamPDF(Book $book)
     {
-        // 1. Validasi (Copy paste logika validasi kamu yg lama di sini)
+        // 1. Validasi Keamanan (Cek User Login & Status Peminjaman)
         $hasAccess = Peminjaman::where('user_id', Auth::id())
             ->where('book_id', $book->id)
             ->where('status', 'dipinjam')
-            // ->where(...) validasi tanggal dsb
+            ->where(function ($query) {
+                $query->whereNull('tanggal_harus_kembali')
+                      ->orWhereDate('tanggal_harus_kembali', '>=', Carbon::today());
+            })
             ->exists();
 
+        // Bypass akses untuk Admin
+        if (Auth::user()->role === 'admin') {
+            $hasAccess = true;
+        }
+
         if (!$hasAccess) {
-            abort(403);
+            abort(403, 'Akses ditolak. Masa pinjam habis atau Anda belum meminjam buku ini.');
         }
 
-        // 2. Cek File
-        if (!Storage::disk('local')->exists($book->file_ebook)) {
-            abort(404);
+        // 2. Tentukan Path File (PERBAIKAN DISINI: file_path -> file_ebook)
+        $path = $book->file_ebook;
+
+        // 3. Cek Keberadaan File di Storage (Disk Public)
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404, 'File buku fisik tidak ditemukan di server.');
         }
 
-        $path = Storage::disk('local')->path($book->file_ebook);
+        // 4. Return File sebagai Stream (Inline)
+        $fullPath = Storage::disk('public')->path($path);
 
-        // --- BAGIAN PENTING: PEMBERSIH DATA ---
-        // Ini akan menghapus semua output (spasi/error php) yang buffer
-        // sebelum mengirim file binary murni.
-        if (ob_get_length()) {
-            ob_end_clean();
-        }
-
-        // 3. Return dengan Header Lengkap
-        return response()->file($path, [
+        return response()->file($fullPath, [
             'Content-Type' => 'application/pdf',
-            'Content-Length' => filesize($path), // Memberi tahu browser ukuran file total
-            'Accept-Ranges' => 'bytes',          // Membolehkan PDF.js download per halaman (streaming)
+            'Content-Disposition' => 'inline; filename="' . $book->slug . '.pdf"'
         ]);
     }
 }
