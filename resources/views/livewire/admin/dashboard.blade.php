@@ -242,7 +242,7 @@ new class extends Component
                 </div>
 
                 <div class="p-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 text-center">
-                    <a href="/peminjaman" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                    <a href="{{ route('admin.peminjaman') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
                         Lihat Semua Aktivitas &rarr;
                     </a>
                 </div>

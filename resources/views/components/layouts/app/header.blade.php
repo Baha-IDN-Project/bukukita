@@ -3,60 +3,46 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:header container class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+    <body class="min-h-screen bg-zinc-50 text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200">
+
+        {{-- Header dengan efek Glassmorphism & Sticky --}}
+        <flux:header container class="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/80 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-900/80">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <a href="{{ route('dashboard') }}" class="ms-2 me-5 flex items-center space-x-2 rtl:space-x-reverse lg:ms-0" wire:navigate>
                 <x-app-logo />
             </a>
 
-            <flux:navbar class="-mb-px max-lg:hidden">
-                <div class="relative w-64 max-lg:hidden">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <flux:icon name="magnifying-glass" class="size-5 text-gray-400" />
-                    </div>
-                    <flux:input
-                        type="search"
-                        name="search"
-                        id="navbar_search"
-                        placeholder="Cari Koleksi..."
-                        class="block w-full h-10 pl-10"
-                    />
-                </div>
-            </flux:navbar>
-
             <flux:spacer />
 
             <flux:navbar class="me-1.5 space-x-0.5 rtl:space-x-reverse py-0!">
-
                 {{-- GANTI INI --}}
                 <x-nav.user-header-menu />
                 {{-- BATAS PENGGANTIAN --}}
             </flux:navbar>
 
-            <!-- Desktop User Menu -->
             <flux:dropdown position="top" align="end">
                 <flux:profile
-                    class="cursor-pointer"
+                    class="cursor-pointer hover:opacity-80 transition-opacity"
                     :initials="auth()->user()->initials()"
                 />
 
-                <flux:menu>
+                <flux:menu class="min-w-[220px]">
                     <flux:menu.radio.group>
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
+                                {{-- Avatar dengan Ring halus --}}
+                                <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg ring-1 ring-zinc-200 dark:ring-zinc-700">
                                     <span
-                                        class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white"
+                                        class="flex h-full w-full items-center justify-center rounded-lg bg-zinc-100 text-black dark:bg-zinc-800 dark:text-white"
                                     >
                                         {{ auth()->user()->initials() }}
                                     </span>
                                 </span>
 
                                 <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                    <span class="truncate text-xs">{{ auth()->user()->email }}</span>
+                                    <span class="truncate font-semibold text-zinc-800 dark:text-zinc-100">{{ auth()->user()->name }}</span>
+                                    <span class="truncate text-xs text-zinc-500 dark:text-zinc-400">{{ auth()->user()->email }}</span>
                                 </div>
                             </div>
                         </div>
@@ -80,8 +66,7 @@
             </flux:dropdown>
         </flux:header>
 
-        <!-- Mobile Menu -->
-        <flux:sidebar stashable sticky class="lg:hidden border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar stashable sticky class="lg:hidden border-e border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             <a href="{{ route('dashboard') }}" class="ms-1 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
@@ -109,7 +94,10 @@
             </flux:navlist>
         </flux:sidebar>
 
-        {{ $slot }}
+        {{-- Main Content Wrapper (Optional: flux:main jika tersedia, atau div biasa) --}}
+        <main>
+            {{ $slot }}
+        </main>
 
         @fluxScripts
     </body>

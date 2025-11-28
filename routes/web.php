@@ -35,10 +35,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 Route::middleware(['auth', 'verified'])->prefix('member')->name('user.')->group(function () {
     Volt::route('dashboard', 'user.dashboard')->name('dashboard');
     Volt::route('koleksi', 'user.koleksi')->name('koleksi');
+    Volt::route('kategori', 'user.kategori')->name('kategori');
     Volt::route('rak', 'user.rak')->name('rak');
     Volt::route('buku/{book:slug}', 'user.buku-detail')->name('buku.detail');
-
-    // Halaman Baca (Reader Interface)
     Volt::route('baca/{book:slug}', 'user.read')->name('baca');
 });
 

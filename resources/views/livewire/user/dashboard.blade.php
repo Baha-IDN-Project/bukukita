@@ -14,6 +14,9 @@ class extends Component {
     public Collection $highestRatedBooks;
     public Collection $categories;
 
+    // Menambahkan properti pencarian untuk Search Bar di Hero Section
+    public string $search = '';
+
     public function mount(): void
     {
         $this->newestBooks = Book::with('categories')
@@ -24,13 +27,23 @@ class extends Component {
         $this->highestRatedBooks = Book::with('categories')
             ->withAvg('reviews', 'rating')
             ->orderByDesc('reviews_avg_rating')
-            ->take(10) // Tampilkan lebih banyak (10) agar scrolling lebih berguna
+            ->take(10)
             ->get();
 
-        $this->categories = Category::withCount('books') // Opsional: hitung jumlah buku
-            ->orderByDesc('created_at')
-            ->take(8)
+        $this->categories = Category::withCount('books')
+            ->orderByDesc('created_at') // Atau orderBy('nama_kategori') sesuai selera
+            ->take(8) // Limit tampilan di dashboard agar tidak terlalu panjang
             ->get();
+    }
+
+    // Logic untuk melakukan pencarian dari Dashboard (Redirect ke halaman Koleksi)
+    public function performSearch()
+    {
+        if ($this->search) {
+            // Asumsi route 'user.koleksi' menerima parameter 'search'
+            // Ganti 'user.koleksi' dengan nama route halaman pencarian bukumu
+            return $this->redirect(route('user.koleksi', ['search' => $this->search]), navigate: true);
+        }
     }
 
     public function getCoverUrl($gambarCover)
@@ -38,11 +51,10 @@ class extends Component {
         if ($gambarCover) {
             return Storage::url($gambarCover);
         }
-        // Placeholder yang lebih netral
         return 'https://placehold.co/400x600/1e293b/cbd5e1?text=No+Cover';
     }
 
-    // Warna gradient untuk kategori agar lebih vivid
+    // Tetap menggunakan Gradient Dashboard agar visual konsisten
     public function getCategoryGradient($index)
     {
         $gradients = [
@@ -87,18 +99,24 @@ class extends Component {
                     Akses ribuan koleksi buku digital, jurnal, dan referensi terbaik di satu tempat. Mulai petualangan literasimu sekarang.
                 </p>
 
-                {{-- Search Bar Aesthetic --}}
-                <div class="mt-4 flex w-full max-w-md items-center gap-2 rounded-full bg-white/10 p-1.5 ring-1 ring-white/20 backdrop-blur-md transition-all focus-within:bg-white/20 focus-within:ring-indigo-400">
+                {{-- Search Bar (Logic Applied: Sekarang berfungsi) --}}
+                {{-- Menggunakan form agar bisa di-enter --}}
+                <form wire:submit="performSearch" class="mt-4 flex w-full max-w-md items-center gap-2 rounded-full bg-white/10 p-1.5 ring-1 ring-white/20 backdrop-blur-md transition-all focus-within:bg-white/20 focus-within:ring-indigo-400">
                     <div class="pl-4 text-gray-400">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                         </svg>
                     </div>
-                    <input type="text" placeholder="Cari judul buku, penulis..." class="w-full border-none bg-transparent py-2 text-sm text-white placeholder-gray-400 focus:ring-0">
-                    <button class="rounded-full bg-indigo-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500">
+
+                    <input wire:model="search"
+                           type="text"
+                           placeholder="Cari judul buku, penulis..."
+                           class="w-full border-none bg-transparent py-2 text-sm text-white placeholder-gray-400 focus:ring-0 focus:outline-none">
+
+                    <button type="submit" class="rounded-full bg-indigo-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500">
                         Cari
                     </button>
-                </div>
+                </form>
             </div>
         </div>
 
@@ -109,7 +127,8 @@ class extends Component {
                     <h2 class="text-2xl font-bold text-white">Buku Terbaru</h2>
                     <p class="text-sm text-gray-400">Koleksi yang baru saja ditambahkan minggu ini.</p>
                 </div>
-                <a href="#" class="group flex items-center gap-1 text-sm font-medium text-indigo-400 transition hover:text-indigo-300">
+                {{-- Update Link ke halaman semua kategori/koleksi --}}
+                <a href="{{ route('user.koleksi') }}" wire:navigate class="group flex items-center gap-1 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
                     Lihat Semua
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4 transition-transform group-hover:translate-x-1">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -125,15 +144,12 @@ class extends Component {
                             {{-- Card --}}
                             <div class="group relative h-[320px] w-[200px] cursor-pointer overflow-hidden rounded-2xl bg-gray-800 shadow-lg ring-1 ring-white/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20">
 
-                                {{-- Image --}}
                                 <img src="{{ $this->getCoverUrl($book->gambar_cover) }}"
                                      alt="{{ $book->judul }}"
                                      class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110">
 
-                                {{-- Gradient Overlay --}}
                                 <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent opacity-80 group-hover:opacity-90"></div>
 
-                                {{-- Badges (Top) --}}
                                 <div class="absolute left-3 top-3 flex flex-wrap gap-1">
                                     @if($book->categories->isNotEmpty())
                                         <span class="rounded-md bg-black/50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md">
@@ -142,14 +158,12 @@ class extends Component {
                                     @endif
                                 </div>
 
-                                {{-- Content (Bottom) --}}
                                 <div class="absolute bottom-0 left-0 w-full p-4 transition-all duration-300 group-hover:pb-6">
                                     <h3 class="line-clamp-2 text-lg font-bold leading-tight text-white group-hover:text-indigo-300">
                                         {{ $book->judul }}
                                     </h3>
                                     <p class="mt-1 text-sm text-gray-300">{{ $book->penulis }}</p>
 
-                                    {{-- Hover Action --}}
                                     <div class="mt-3 grid grid-rows-[0fr] transition-all duration-300 group-hover:grid-rows-[1fr]">
                                         <div class="overflow-hidden">
                                             <a href="{{ route('user.buku.detail', $book->slug) }}" wire:navigate
@@ -167,12 +181,11 @@ class extends Component {
                         </div>
                     @endforelse
                 </div>
-                {{-- Fade effect on right --}}
                 <div class="pointer-events-none absolute bottom-0 right-0 top-0 w-24 bg-gradient-to-l from-gray-950 to-transparent"></div>
             </div>
         </div>
 
-        {{-- 3. RATING TERTINGGI (Compact Cards) --}}
+        {{-- 3. RATING TERTINGGI --}}
         <div>
             <div class="mb-6 flex items-center gap-3 px-2">
                 <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-500 ring-1 ring-inset ring-yellow-500/20">
@@ -189,12 +202,10 @@ class extends Component {
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 @forelse ($highestRatedBooks as $book)
                     <a href="{{ route('user.buku.detail', $book->slug) }}" wire:navigate class="group flex gap-4 rounded-xl border border-gray-800 bg-gray-900 p-3 transition-all hover:border-indigo-500/30 hover:bg-gray-800">
-                        {{-- Small Cover --}}
                         <div class="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg shadow-md">
                             <img src="{{ $this->getCoverUrl($book->gambar_cover) }}" alt="{{ $book->judul }}" class="h-full w-full object-cover">
                         </div>
 
-                        {{-- Info --}}
                         <div class="flex flex-1 flex-col justify-between py-1">
                             <div>
                                 <h3 class="line-clamp-1 font-bold text-white group-hover:text-indigo-400">{{ $book->judul }}</h3>
@@ -218,35 +229,44 @@ class extends Component {
             </div>
         </div>
 
-        {{-- 4. KATEGORI (Modern Grid) --}}
+        {{-- 4. KATEGORI (Logic Applied: Link sekarang berfungsi) --}}
         <div>
-            <div class="mb-6 px-2">
+            <div class="mb-6 flex items-end justify-between px-2">
                 <h2 class="text-2xl font-bold text-white">Jelajahi Kategori</h2>
+                {{-- Link ke halaman khusus kategori --}}
+                <a href="{{ route('user.kategori') }}" wire:navigate class="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+                    Lihat Semua
+                </a>
             </div>
 
             <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 @forelse ($categories as $index => $category)
-                    <a href="#" class="group relative overflow-hidden rounded-2xl p-6 transition-all hover:scale-[1.02] hover:shadow-xl">
-                        {{-- Dynamic Gradient Background --}}
+                    {{-- PERUBAHAN UTAMA DI SINI: --}}
+                    {{-- 1. href sekarang mengarah ke route 'user.koleksi' dengan parameter 'selectedCategory' --}}
+                    {{-- 2. Menggunakan wire:navigate untuk SPA feeling --}}
+                    <a href="{{ route('user.koleksi', ['selectedCategory' => $category->id]) }}"
+                       wire:navigate
+                       class="group relative overflow-hidden rounded-2xl p-6 transition-all hover:scale-[1.02] hover:shadow-xl">
+
+                        {{-- Background Styling (Tetap mempertahankan style dashboard) --}}
                         <div class="absolute inset-0 bg-gradient-to-br {{ $this->getCategoryGradient($index) }} opacity-20 transition-opacity duration-300 group-hover:opacity-30"></div>
                         <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-[1px]"></div>
-
-                        {{-- Border Gradient border --}}
                         <div class="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/20"></div>
 
                         <div class="relative z-10 flex flex-col items-start justify-between gap-4 h-full">
-                            {{-- Icon Placeholder (Initial) --}}
                             <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white shadow-inner backdrop-blur-sm">
                                 <span class="text-lg font-bold">{{ substr($category->nama_kategori, 0, 1) }}</span>
                             </div>
 
                             <div>
                                 <h3 class="text-lg font-bold text-white">{{ $category->nama_kategori }}</h3>
-                                <p class="text-xs text-gray-300">{{ $category->books_count ?? 0 }} Buku</p>
+                                {{-- Logic Logic: Menampilkan jumlah buku --}}
+                                <p class="text-xs text-gray-300 group-hover:text-white transition-colors">
+                                    {{ $category->books_count ?? 0 }} Buku
+                                </p>
                             </div>
                         </div>
 
-                        {{-- Decoration --}}
                         <div class="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-gradient-to-br {{ $this->getCategoryGradient($index) }} blur-2xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
                     </a>
                 @empty

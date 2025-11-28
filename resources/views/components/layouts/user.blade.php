@@ -3,33 +3,41 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
     <head>
-        {{-- Asumsi dari file app/sidebar.blade.php --}}
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
+    <body class="min-h-screen bg-zinc-50 text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200">
 
         {{-- 1. Panggil komponen header --}}
         <x-layouts.app.header />
 
-        {{-- 2. Area konten utama --}}
-        <flux:main>
+        {{--
+            CHANGE 2: Flux Main Container
+            Menambahkan prop `container` agar otomatis ada max-width dan margin auto.
+        --}}
+        <flux:main container>
+
             {{--
-              Ini adalah bagian PENTING.
-              File dashboard.blade.phpa memiliki <x-slot name="header">.
-              Kode ini akan mengambil slot itu dan menampilkannya di sini.
+                CHANGE 3: Header Slot yang Lebih Bersih
+                Menghapus background box/border kaku.
+                Membiarkan header menyatu dengan flow halaman tapi tetap memiliki jarak yang tegas.
             --}}
             @if (isset($header))
-                <header class="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-                    <div class="container mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                <header class="py-6 mb-2">
+                    {{--
+                       Kita tidak perlu container lagi di sini karena <flux:main>
+                       sudah membungkusnya. Cukup styling teks/kontennya saja.
+                    --}}
+                    <div class="flex items-center justify-between">
                         {{ $header }}
                     </div>
                 </header>
             @endif
 
-            {{-- 3. Ini adalah slot untuk konten utama halaman (isi dashboard Anda) --}}
-
-            {{ $slot }}
-
+            {{-- 4. Konten Utama --}}
+            {{-- Menambahkan wrapper fade-in agar transisi halaman terasa halus --}}
+            <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                {{ $slot }}
+            </div>
 
         </flux:main>
 

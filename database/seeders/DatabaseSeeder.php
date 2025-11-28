@@ -14,16 +14,53 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create([
-        //     'role' => 'user' // Pastikan user factory Anda memiliki role 'user'
-        // ]);
-
+        // 1. Membuat Admin (Kode Lama Anda)
         User::firstOrCreate(
-            ['email' => 'admin@gmail.com'], // Cek berdasarkan email
+            ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Admin',
                 'password' => Hash::make('12345678'),
                 'role' => 'admin',
+                'email_verified_at' => now()
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'user@gmail.com'],
+            [
+                'name' => 'Ahmad Bahaudin Mudhary',
+                'password' => Hash::make('12345678'),
+                'role' => 'user',
+                'email_verified_at' => now()
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'user@gmail.com'],
+            [
+                'name' => 'Ahmad Bahaudin Mudhary',
+                'password' => Hash::make('12345678'),
+                'role' => 'user',
+                'email_verified_at' => now()
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'mahiru@gmail.com'],
+            [
+                'name' => 'Shiina Mahiru',
+                'password' => Hash::make('12345678'),
+                'role' => 'user',
+                'email_verified_at' => now()
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'illya@gmail.com'],
+            [
+                'name' => 'Illyasviel Von Einzbern',
+                'password' => Hash::make('12345678'),
+                'role' => 'user',
                 'email_verified_at' => now()
             ]
         );
