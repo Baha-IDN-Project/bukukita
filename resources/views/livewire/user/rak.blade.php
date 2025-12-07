@@ -18,11 +18,38 @@ class extends Component {
     public $tab = 'active';
 
     /**
+     * Cek dan kembalikan buku yang sudah melewati tenggat waktu
+     */
+    public function checkAndReturnOverdueBooks()
+    {
+        $overdueLoans = Peminjaman::where('user_id', Auth::id())
+            ->where('status', 'dipinjam')
+            ->whereNotNull('tanggal_harus_kembali')
+            ->whereDate('tanggal_harus_kembali', '<', now())
+            ->get();
+
+        $returnedCount = 0;
+        foreach ($overdueLoans as $loan) {
+            $loan->update(['status' => 'selesai']);
+            $returnedCount++;
+        }
+
+        if ($returnedCount > 0) {
+            session()->flash('message', "Berhasil mengembalikan {$returnedCount} buku yang sudah melewati tenggat waktu.");
+        }
+
+        return $returnedCount;
+    }
+
+    /**
      * Tab 1: Buku yang sedang dipinjam atau Pending approval
      */
     #[Computed]
     public function activeLoans()
     {
+        // Auto-return overdue books setiap kali tab active dibuka
+        $this->checkAndReturnOverdueBooks();
+
         return Peminjaman::with(['book.categories'])
             ->where('user_id', Auth::id())
             ->whereIn('status', ['pending', 'dipinjam'])
@@ -76,6 +103,19 @@ class extends Component {
 <div class="min-h-screen bg-gray-950 text-gray-200 font-sans selection:bg-indigo-500 selection:text-white">
 
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+
+        {{-- Flash Message untuk Auto Return --}}
+        @if (session()->has('message'))
+            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
+                 class="mb-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 text-emerald-400">
+                <div class="flex items-center gap-3">
+                    <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-sm font-medium">{{ session('message') }}</p>
+                </div>
+            </div>
+        @endif
 
         {{-- Header Section: Clean & Minimalist --}}
         <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
@@ -173,6 +213,14 @@ class extends Component {
                                             <p class="mt-1 font-mono text-sm {{ $loan->status == 'dipinjam' && now()->gt($loan->tanggal_harus_kembali) ? 'text-red-400 font-bold' : 'text-indigo-300' }}">
                                                 {{ $loan->tanggal_harus_kembali ? $loan->tanggal_harus_kembali->format('d M Y') : '-' }}
                                             </p>
+                                            @if($loan->status == 'dipinjam' && $loan->tanggal_harus_kembali && now()->gt($loan->tanggal_harus_kembali))
+                                                <p class="mt-1 text-xs text-red-400 flex items-center gap-1">
+                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    Terlambat {{ now()->diffInDays($loan->tanggal_harus_kembali) }} hari
+                                                </p>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
