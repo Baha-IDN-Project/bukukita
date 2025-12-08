@@ -4,12 +4,25 @@
             {{ __('Dashboard') }}
         </flux:navlist.item>
 
-        <flux:navlist.item icon="magnifying-glass" href="#" wire:navigate>
-            {{ __('Cari Buku') }}
-        </flux:navlist.item>
-        <flux:navlist.item icon="bookmark" href="#" wire:navigate>
-            {{ __('Pinjaman Saya') }}
-        </flux:navlist.item>
+    <flux:navbar.item
+        icon="book-open-text"
+        :href="route('user.koleksi')"
+        :current="request()->routeIs('user.koleksi')"
+        wire:navigate
+    >
+        {{ __('Koleksi Buku') }}
+    </flux:navbar.item>
+
+    <flux:navbar.item
+        icon="book-open"
+        :href="route('user.rak')"
+        :current="request()->routeIs('user.rak')"
+        wire:navigate
+        class="relative"
+    >
+        {{ __('Rak Pinjam') }}
+
+    </flux:navbar.item>
 
     </flux:navlist.group>
 </flux:navlist>
